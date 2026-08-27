@@ -6,6 +6,8 @@ import {
   type GoogleCalendarAdapter,
 } from "./google-calendar";
 
+const scheduleTypeLabels = { live: "LIVE", meet_and_greet: "Meet & Greet", merch: "Merch", other: "Other" };
+
 describe("Google Calendar registration", () => {
   it("registers timed schedules and reports untimed schedules separately", async () => {
     const document = {
@@ -26,7 +28,12 @@ describe("Google Calendar registration", () => {
       insertEvent,
     };
 
-    const results = await registerSchedulesWithGoogleCalendar(document, [timed, untimed], adapter);
+    const results = await registerSchedulesWithGoogleCalendar(
+      document,
+      [timed, untimed],
+      adapter,
+      scheduleTypeLabels,
+    );
 
     expect(insertEvent).toHaveBeenCalledWith(
       "memory-only-token",
@@ -35,7 +42,7 @@ describe("Google Calendar registration", () => {
         start: { dateTime: "2026-08-27T10:00:00", timeZone: "Asia/Tokyo" },
       }),
     );
-    expect(results).toEqual([{ scheduleId: "timed", success: true, message: "登録しました" }]);
+    expect(results).toEqual([{ scheduleId: "timed", success: true, messageCode: "registrationSuccess" }]);
   });
 
   it("selects only failed registerable schedules for retry", () => {
@@ -47,9 +54,9 @@ describe("Google Calendar registration", () => {
       selectFailedCalendarSchedules(
         [failed, succeeded, untimed],
         [
-          { scheduleId: "failed", success: false, message: "failed" },
-          { scheduleId: "succeeded", success: true, message: "ok" },
-          { scheduleId: "untimed", success: false, message: "missing time" },
+          { scheduleId: "failed", success: false, messageCode: "registrationFailed" },
+          { scheduleId: "succeeded", success: true, messageCode: "registrationSuccess" },
+          { scheduleId: "untimed", success: false, messageCode: "registrationFailed" },
         ],
       ),
     ).toEqual([failed]);

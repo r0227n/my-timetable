@@ -1,12 +1,15 @@
 import { Copy, Plus, Search, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { findDuplicateIds, findInvalidTimeRangeIds } from "../domain/conflicts";
 import {
   createBlankSchedule,
-  scheduleTypeLabels,
+  scheduleTypes,
   type ScheduleItem,
   type TimetableDocument,
 } from "../domain/timetable";
+import { formatNumber } from "../i18n/format";
+import { currentLanguage } from "../i18n/i18n";
 
 interface ReviewStepProps {
   document: TimetableDocument;
@@ -17,6 +20,9 @@ interface ReviewStepProps {
 }
 
 export function ReviewStep({ document, sourceUrl, onChange, onBack, onNext }: ReviewStepProps) {
+  const { t } = useTranslation("review");
+  const { t: tCommon } = useTranslation("common");
+  const language = currentLanguage();
   const [focusedScheduleId, setFocusedScheduleId] = useState<string | null>(null);
   const [sourceSize, setSourceSize] = useState({ width: 0, height: 0 });
   const duplicates = findDuplicateIds(document.schedules);
@@ -47,28 +53,32 @@ export function ReviewStep({ document, sourceUrl, onChange, onBack, onNext }: Re
       <div className="workspace-heading">
         <div>
           <span className="eyebrow">04 / REVIEW</span>
-          <h1>読み取り結果を確認</h1>
-          <p>低信頼の項目を中心に、元画像と見比べて修正してください。</p>
+          <h1>{t("heading")}</h1>
+          <p>{t("description")}</p>
         </div>
         <div className="review-count">
-          <strong>{document.schedules.filter((item) => item.verified).length}</strong>
-          <span>/ {document.schedules.length} 確認済み</span>
+          <strong>
+            {t("verifiedCount", {
+              verified: formatNumber(document.schedules.filter((item) => item.verified).length, language),
+              total: formatNumber(document.schedules.length, language),
+            })}
+          </strong>
         </div>
       </div>
       <section className="event-form panel">
-        <h2>イベント情報</h2>
+        <h2>{t("eventInfo")}</h2>
         <div className="form-grid">
           <label>
-            <span>イベント名</span>
+            <span>{t("eventName")}</span>
             <input
               value={document.event.name}
               onChange={(e) => updateEvent("name", e.target.value)}
-              placeholder="イベント名"
+              placeholder={t("eventName")}
             />
           </label>
           <label>
             <span>
-              開催日 <b>必須</b>
+              {t("date")} <b>{t("required")}</b>
             </span>
             <input
               type="date"
@@ -78,45 +88,45 @@ export function ReviewStep({ document, sourceUrl, onChange, onBack, onNext }: Re
             />
           </label>
           <label>
-            <span>会場</span>
+            <span>{t("venue")}</span>
             <input
               value={document.event.venue ?? ""}
               onChange={(e) => updateEvent("venue", e.target.value || null)}
-              placeholder="会場名"
+              placeholder={t("venuePlaceholder")}
             />
           </label>
           <label>
-            <span>タイムゾーン</span>
+            <span>{t("timezone")}</span>
             <select value={document.event.timezone} onChange={(e) => updateEvent("timezone", e.target.value)}>
               <option>Asia/Tokyo</option>
               <option>UTC</option>
             </select>
           </label>
           <label>
-            <span>開場時刻</span>
+            <span>{t("openTime")}</span>
             <input
-              aria-label="開場時刻"
+              aria-label={t("openTime")}
               type="time"
               value={document.event.openTime ?? ""}
               onChange={(e) => updateEvent("openTime", e.target.value || null)}
             />
           </label>
           <label>
-            <span>開演時刻</span>
+            <span>{t("startTime")}</span>
             <input
-              aria-label="開演時刻"
+              aria-label={t("startTime")}
               type="time"
               value={document.event.startTime ?? ""}
               onChange={(e) => updateEvent("startTime", e.target.value || null)}
             />
           </label>
           <label className="form-span-full">
-            <span>注記</span>
+            <span>{t("notes")}</span>
             <textarea
-              aria-label="注記"
+              aria-label={t("notes")}
               value={document.event.notes.join("\n")}
               onChange={(e) => updateEvent("notes", e.target.value.split("\n").filter(Boolean))}
-              placeholder="1行につき1件"
+              placeholder={t("notesPlaceholder")}
             />
           </label>
         </div>
@@ -125,12 +135,12 @@ export function ReviewStep({ document, sourceUrl, onChange, onBack, onNext }: Re
         {sourceUrl ? (
           <aside className="source-panel panel">
             <h2>
-              <Search size={17} /> 元画像
+              <Search size={17} /> {t("sourceImage")}
             </h2>
             <div className="source-image-wrap">
               <img
                 src={sourceUrl}
-                alt="確認用の解析対象タイムテーブル"
+                alt={t("sourceAlt")}
                 onLoad={(event) =>
                   setSourceSize({
                     width: event.currentTarget.naturalWidth,
@@ -142,7 +152,7 @@ export function ReviewStep({ document, sourceUrl, onChange, onBack, onNext }: Re
                 <svg
                   className="source-region-overlay"
                   viewBox={`0 0 ${sourceSize.width} ${sourceSize.height}`}
-                  aria-label="選択した予定の認識領域"
+                  aria-label={t("sourceRegion")}
                 >
                   {document.schedules
                     .find((item) => item.id === focusedScheduleId)
@@ -163,8 +173,13 @@ export function ReviewStep({ document, sourceUrl, onChange, onBack, onNext }: Re
         <section className="schedule-panel panel">
           <div className="panel-heading">
             <div>
-              <h2>予定一覧</h2>
-              <span>{document.schedules.length}件</span>
+              <h2>{t("scheduleList")}</h2>
+              <span>
+                {t("scheduleCount", {
+                  count: document.schedules.length,
+                  formattedCount: formatNumber(document.schedules.length, language),
+                })}
+              </span>
             </div>
             <button
               className="small-button"
@@ -173,24 +188,24 @@ export function ReviewStep({ document, sourceUrl, onChange, onBack, onNext }: Re
                 onChange({ ...document, schedules: [...document.schedules, createBlankSchedule()] })
               }
             >
-              <Plus size={15} /> 行を追加
+              <Plus size={15} /> {t("addRow")}
             </button>
           </div>
           <div className="schedule-table-wrap">
             <table className="schedule-table">
               <thead>
                 <tr>
-                  <th>出演者名</th>
-                  <th>種別</th>
-                  <th>開始</th>
-                  <th>終了</th>
-                  <th>相対時刻</th>
-                  <th>ステージ / ブース</th>
-                  <th>属性</th>
-                  <th>信頼度</th>
-                  <th>確認</th>
+                  <th>{t("columns.artist")}</th>
+                  <th>{t("columns.type")}</th>
+                  <th>{t("columns.start")}</th>
+                  <th>{t("columns.end")}</th>
+                  <th>{t("columns.relative")}</th>
+                  <th>{t("columns.place")}</th>
+                  <th>{t("columns.attributes")}</th>
+                  <th>{t("columns.confidence")}</th>
+                  <th>{t("columns.verified")}</th>
                   <th>
-                    <span className="sr-only">操作</span>
+                    <span className="sr-only">{t("columns.actions")}</span>
                   </th>
                 </tr>
               </thead>
@@ -204,33 +219,33 @@ export function ReviewStep({ document, sourceUrl, onChange, onBack, onNext }: Re
                   >
                     <td>
                       <input
-                        aria-label="出演者名"
+                        aria-label={t("artist")}
                         value={item.artist}
                         onChange={(e) => updateSchedule(item.id, { artist: e.target.value })}
-                        placeholder="出演者名"
+                        placeholder={t("artist")}
                       />
                       {duplicates.has(item.id) ? (
-                        <small className="cell-warning">重複しています</small>
+                        <small className="cell-warning">{t("duplicateWarning")}</small>
                       ) : null}
                     </td>
                     <td>
                       <select
-                        aria-label="種別"
+                        aria-label={t("type")}
                         value={item.type}
                         onChange={(e) =>
                           updateSchedule(item.id, { type: e.target.value as ScheduleItem["type"] })
                         }
                       >
-                        {Object.entries(scheduleTypeLabels).map(([value, label]) => (
+                        {scheduleTypes.map((value) => (
                           <option key={value} value={value}>
-                            {label}
+                            {tCommon(`scheduleTypes.${value}`)}
                           </option>
                         ))}
                       </select>
                     </td>
                     <td>
                       <input
-                        aria-label="開始時刻"
+                        aria-label={t("scheduleStart")}
                         type="time"
                         value={item.startTime ?? ""}
                         onChange={(e) => updateSchedule(item.id, { startTime: e.target.value || null })}
@@ -238,49 +253,58 @@ export function ReviewStep({ document, sourceUrl, onChange, onBack, onNext }: Re
                     </td>
                     <td>
                       <input
-                        aria-label="終了時刻"
+                        aria-label={t("scheduleEnd")}
                         type="time"
                         value={item.endTime ?? ""}
                         onChange={(e) => updateSchedule(item.id, { endTime: e.target.value || null })}
                       />
                       {invalidTimeRanges.has(item.id) ? (
-                        <small className="cell-warning">終了時刻は開始時刻より後にしてください</small>
+                        <small className="cell-warning">{t("invalidRange")}</small>
                       ) : null}
                     </td>
                     <td>
                       <input
-                        aria-label="相対時刻表現"
+                        aria-label={t("relativeTime")}
                         value={item.relativeTimeLabel ?? ""}
                         onChange={(e) =>
                           updateSchedule(item.id, { relativeTimeLabel: e.target.value || null })
                         }
-                        placeholder="終演後など"
+                        placeholder={t("relativePlaceholder")}
                       />
                     </td>
                     <td>
                       <div className="stacked-inputs">
                         <input
-                          aria-label="ステージ"
+                          aria-label={t("stage")}
                           value={item.stage ?? ""}
                           onChange={(e) => updateSchedule(item.id, { stage: e.target.value || null })}
-                          placeholder="ステージ"
+                          placeholder={t("stage")}
                         />
                         <input
-                          aria-label="ブース"
+                          aria-label={t("booth")}
                           value={item.booth ?? ""}
                           onChange={(e) => updateSchedule(item.id, { booth: e.target.value || null })}
-                          placeholder="ブース"
+                          placeholder={t("booth")}
                         />
                       </div>
                     </td>
                     <td>
                       <textarea
-                        aria-label="撮影等の属性"
-                        value={formatAttributes(item.attributes)}
+                        aria-label={t("attributes")}
+                        value={formatAttributes(item.attributes, {
+                          unknown: tCommon("attribute.unknown"),
+                          yes: tCommon("attribute.yes"),
+                          no: tCommon("attribute.no"),
+                        })}
                         onChange={(e) =>
-                          updateSchedule(item.id, { attributes: parseAttributes(e.target.value) })
+                          updateSchedule(item.id, {
+                            attributes: parseAttributes(e.target.value, {
+                              yes: tCommon("attribute.yes"),
+                              no: tCommon("attribute.no"),
+                            }),
+                          })
                         }
-                        placeholder="動画=はい"
+                        placeholder={t("attributesPlaceholder")}
                       />
                     </td>
                     <td>
@@ -289,12 +313,12 @@ export function ReviewStep({ document, sourceUrl, onChange, onBack, onNext }: Re
                     <td>
                       <label className="check-label">
                         <input
-                          aria-label={`${item.artist || "予定"}を確認済みにする`}
+                          aria-label={t("markVerified", { artist: item.artist || t("scheduleFallback") })}
                           type="checkbox"
                           checked={item.verified}
                           onChange={(e) => updateSchedule(item.id, { verified: e.target.checked })}
                         />
-                        <span>確認済み</span>
+                        <span>{t("verified")}</span>
                       </label>
                     </td>
                     <td>
@@ -302,14 +326,14 @@ export function ReviewStep({ document, sourceUrl, onChange, onBack, onNext }: Re
                         <button
                           type="button"
                           onClick={() => duplicate(item)}
-                          aria-label={`${item.artist || "予定"}を複製`}
+                          aria-label={t("duplicate", { artist: item.artist || t("scheduleFallback") })}
                         >
                           <Copy size={15} />
                         </button>
                         <button
                           type="button"
                           onClick={() => remove(item.id)}
-                          aria-label={`${item.artist || "予定"}を削除`}
+                          aria-label={t("delete", { artist: item.artist || t("scheduleFallback") })}
                         >
                           <Trash2 size={15} />
                         </button>
@@ -330,37 +354,38 @@ export function ReviewStep({ document, sourceUrl, onChange, onBack, onNext }: Re
               })
             }
           >
-            すべて確認済みにする
+            {t("verifyAll")}
           </button>
         </section>
       </div>
-      {!document.event.date ? (
-        <p className="phase-note">開催日はカレンダー出力までに入力してください。</p>
-      ) : null}
+      {!document.event.date ? <p className="phase-note">{t("dateReminder")}</p> : null}
       <div className="footer-actions">
         <button className="ghost-button" type="button" onClick={onBack}>
-          戻る
+          {tCommon("back")}
         </button>
         <button className="primary-button" type="button" disabled={!canContinue} onClick={onNext}>
-          予定を選ぶ
+          {t("next")}
         </button>
       </div>
     </main>
   );
 }
 
-function formatAttributes(attributes: ScheduleItem["attributes"]): string {
+function formatAttributes(
+  attributes: ScheduleItem["attributes"],
+  labels: { unknown: string; yes: string; no: string },
+): string {
   return Object.entries(attributes)
-    .map(([name, value]) => `${name}=${value === null ? "未確認" : value ? "はい" : "いいえ"}`)
+    .map(([name, value]) => `${name}=${value === null ? labels.unknown : value ? labels.yes : labels.no}`)
     .join("\n");
 }
 
-function parseAttributes(value: string): ScheduleItem["attributes"] {
+function parseAttributes(value: string, labels: { yes: string; no: string }): ScheduleItem["attributes"] {
   return Object.fromEntries(
     value
       .split("\n")
       .map((line) => line.split("=", 2).map((part) => part.trim()))
       .filter(([name]) => Boolean(name))
-      .map(([name, state]) => [name, state === "はい" ? true : state === "いいえ" ? false : null]),
+      .map(([name, state]) => [name, state === labels.yes ? true : state === labels.no ? false : null]),
   );
 }

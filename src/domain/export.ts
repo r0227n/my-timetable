@@ -1,4 +1,5 @@
-import { scheduleTypeLabels, type ScheduleItem, type TimetableDocument } from "./timetable";
+import { AppError } from "./errors";
+import type { ScheduleItem, ScheduleType, TimetableDocument } from "./timetable";
 
 export interface TimelineOptions {
   width: number;
@@ -14,16 +15,28 @@ export interface TimelineOptions {
   showBooth: boolean;
 }
 
+export interface ExportLabels {
+  scheduleTypes: Record<ScheduleType, string>;
+  timelineDescription: (count: number) => string;
+  untimed: string;
+  unsetTime: string;
+  conflict: string;
+  formatDate: (date: string, timeZone: string) => string;
+}
+
 export function buildTimelineSvg(
   document: TimetableDocument,
   schedules: ScheduleItem[],
   options: TimelineOptions,
+  labels: ExportLabels,
 ): string {
   const width = Math.max(320, Math.round(options.width));
   const height = Math.max(320, Math.round(options.height));
   const title = escapeXml(options.title || document.event.name || "My Timetable");
   const subtitle = [
-    options.showDate ? document.event.date : null,
+    options.showDate && document.event.date
+      ? labels.formatDate(document.event.date, document.event.timezone)
+      : null,
     options.showVenue ? document.event.venue : null,
   ]
     .filter(Boolean)
@@ -31,13 +44,13 @@ export function buildTimelineSvg(
   const layout = createTimelineLayout(schedules);
   const cards =
     options.layout === "horizontal"
-      ? renderHorizontalCards(layout, width, height, options)
-      : renderVerticalCards(layout, width, height, options);
+      ? renderHorizontalCards(layout, width, height, options, labels)
+      : renderVerticalCards(layout, width, height, options, labels);
 
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-labelledby="title description">`,
     `<title id="title">${title}</title>`,
-    `<desc id="description">${escapeXml(`${schedules.length}件の予定を含む個人用タイムライン`)}</desc>`,
+    `<desc id="description">${escapeXml(labels.timelineDescription(schedules.length))}</desc>`,
     `<rect width="${width}" height="${height}" fill="${escapeXml(options.background)}"/>`,
     `<rect width="12" height="${height}" fill="${escapeXml(options.accent)}"/>`,
     `<text x="${Math.round(width * 0.07)}" y="${Math.round(height * 0.09)}" font-family="system-ui, sans-serif" font-size="${Math.round(width * 0.045)}" font-weight="700" fill="#252722">${title}</text>`,
@@ -49,8 +62,12 @@ export function buildTimelineSvg(
   ].join("");
 }
 
-export function buildIcsCalendar(document: TimetableDocument, schedules: ScheduleItem[]): string {
-  if (!document.event.date) throw new Error("ICS出力には開催日が必要です。");
+export function buildIcsCalendar(
+  document: TimetableDocument,
+  schedules: ScheduleItem[],
+  scheduleTypeLabels: Record<ScheduleType, string>,
+): string {
+  if (!document.event.date) throw new AppError("icsDateRequired");
   const events = schedules.flatMap((schedule) => {
     if (!schedule.startTime || !schedule.endTime || schedule.endTime <= schedule.startTime) return [];
     const date = document.event.date!.replaceAll("-", "");
@@ -71,7 +88,13 @@ export function buildIcsCalendar(document: TimetableDocument, schedules: Schedul
       "END:VEVENT",
     ];
   });
-  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//My Timetable//JA", ...events, "END:VCALENDAR"];
+  const lines = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//My Timetable//NONSGML v1.0//EN",
+    ...events,
+    "END:VCALENDAR",
+  ];
   return `${lines.map(foldIcsLine).join("\r\n")}\r\n`;
 }
 
@@ -138,6 +161,7 @@ function renderVerticalCards(
   width: number,
   height: number,
   options: TimelineOptions,
+  labels: ExportLabels,
 ): string[] {
   const top = height * 0.18;
   const untimedSpace = layout.untimed.length ? Math.min(height * 0.22, layout.untimed.length * 58 + 45) : 0;
@@ -157,13 +181,14 @@ function renderVerticalCards(
       cardWidth,
       cardHeight,
       options,
+      labels,
       layout.conflictIds.has(schedule.id),
     );
   });
   if (layout.untimed.length) {
     const headingY = top + availableHeight + 28;
     cards.push(
-      `<text x="${width * 0.07}" y="${headingY}" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="#73756d">時刻未確定</text>`,
+      `<text x="${width * 0.07}" y="${headingY}" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="#73756d">${escapeXml(labels.untimed)}</text>`,
     );
     layout.untimed.forEach((schedule, index) => {
       cards.push(
@@ -174,6 +199,7 @@ function renderVerticalCards(
           availableWidth,
           46,
           options,
+          labels,
           false,
         ),
       );
@@ -187,6 +213,7 @@ function renderHorizontalCards(
   width: number,
   height: number,
   options: TimelineOptions,
+  labels: ExportLabels,
 ): string[] {
   const left = width * 0.07;
   const untimedSpace = layout.untimed.length ? Math.min(width * 0.22, layout.untimed.length * 150 + 80) : 0;
@@ -206,13 +233,14 @@ function renderHorizontalCards(
       cardWidth,
       cardHeight,
       options,
+      labels,
       layout.conflictIds.has(schedule.id),
     );
   });
   if (layout.untimed.length) {
     const x = left + availableWidth + 24;
     cards.push(
-      `<text x="${x}" y="${height * 0.18}" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="#73756d">時刻未確定</text>`,
+      `<text x="${x}" y="${height * 0.18}" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="#73756d">${escapeXml(labels.untimed)}</text>`,
     );
     layout.untimed.forEach((schedule, index) => {
       cards.push(
@@ -223,6 +251,7 @@ function renderHorizontalCards(
           Math.max(120, untimedSpace - 32),
           78,
           options,
+          labels,
           false,
         ),
       );
@@ -238,6 +267,7 @@ function renderTimelineCard(
   width: number,
   height: number,
   options: TimelineOptions,
+  labels: ExportLabels,
   conflicting: boolean,
 ): string {
   const typeColors: Record<ScheduleItem["type"], string> = {
@@ -250,10 +280,10 @@ function renderTimelineCard(
     `<g data-schedule-id="${escapeXml(schedule.id)}">`,
     `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${width.toFixed(1)}" height="${height.toFixed(1)}" rx="10" fill="#fcfaf5" stroke="#d8d2c5"/>`,
     `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="7" height="${height.toFixed(1)}" rx="3" fill="${escapeXml(typeColors[schedule.type])}"/>`,
-    `<text x="${(x + 18).toFixed(1)}" y="${(y + 23).toFixed(1)}" font-family="system-ui, sans-serif" font-size="15" font-weight="700" fill="#252722">${escapeXml(`${schedule.startTime ?? schedule.relativeTimeLabel ?? "未定"} ${schedule.artist}`)}</text>`,
-    `<text x="${(x + 18).toFixed(1)}" y="${(y + 43).toFixed(1)}" font-family="system-ui, sans-serif" font-size="11" fill="#73756d">${escapeXml(scheduleDetails(schedule, options))}</text>`,
+    `<text x="${(x + 18).toFixed(1)}" y="${(y + 23).toFixed(1)}" font-family="system-ui, sans-serif" font-size="15" font-weight="700" fill="#252722">${escapeXml(`${schedule.startTime ?? schedule.relativeTimeLabel ?? labels.unsetTime} ${schedule.artist}`)}</text>`,
+    `<text x="${(x + 18).toFixed(1)}" y="${(y + 43).toFixed(1)}" font-family="system-ui, sans-serif" font-size="11" fill="#73756d">${escapeXml(scheduleDetails(schedule, options, labels.scheduleTypes))}</text>`,
     conflicting
-      ? `<text x="${(x + width - 24).toFixed(1)}" y="${(y + 23).toFixed(1)}" font-size="16" aria-label="重複予定">⚠</text>`
+      ? `<text x="${(x + width - 24).toFixed(1)}" y="${(y + 23).toFixed(1)}" font-size="16" aria-label="${escapeXml(labels.conflict)}">⚠</text>`
       : "",
     `</g>`,
   ].join("");
@@ -265,7 +295,11 @@ function timeToMinutes(value: string | null): number | null {
   return hours * 60 + minutes;
 }
 
-function scheduleDetails(schedule: ScheduleItem, options: TimelineOptions): string {
+function scheduleDetails(
+  schedule: ScheduleItem,
+  options: TimelineOptions,
+  scheduleTypeLabels: Record<ScheduleType, string>,
+): string {
   return [
     options.showType ? scheduleTypeLabels[schedule.type] : null,
     options.showStage ? schedule.stage : null,

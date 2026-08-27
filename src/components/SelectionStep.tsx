@@ -1,7 +1,10 @@
 import { AlertTriangle, Check, Search } from "lucide-react";
 import { useDeferredValue, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { detectConflicts, findInvalidTimeRangeIds } from "../domain/conflicts";
-import { scheduleTypeLabels, type ScheduleType, type TimetableDocument } from "../domain/timetable";
+import { scheduleTypes, type ScheduleType, type TimetableDocument } from "../domain/timetable";
+import { formatNumber } from "../i18n/format";
+import { currentLanguage } from "../i18n/i18n";
 
 interface SelectionStepProps {
   document: TimetableDocument;
@@ -12,6 +15,9 @@ interface SelectionStepProps {
 }
 
 export function SelectionStep({ document, selected, onSelectedChange, onBack, onNext }: SelectionStepProps) {
+  const { t } = useTranslation("selection");
+  const { t: tCommon } = useTranslation("common");
+  const language = currentLanguage();
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
   const [type, setType] = useState<ScheduleType | "all">("all");
@@ -59,12 +65,12 @@ export function SelectionStep({ document, selected, onSelectedChange, onBack, on
       <div className="workspace-heading">
         <div>
           <span className="eyebrow">05 / SELECT</span>
-          <h1>行きたい予定を選ぶ</h1>
-          <p>出演者をまとめて、または予定ごとに選べます。時間の重なりもここで確認できます。</p>
+          <h1>{t("heading")}</h1>
+          <p>{t("description")}</p>
         </div>
         <div className="selected-badge">
-          <strong>{selected.size}</strong>
-          <span>件選択中</span>
+          <strong>{formatNumber(selected.size, language)}</strong>
+          <span>{t("selectedLabel")}</span>
         </div>
       </div>
       <section className="filter-bar panel">
@@ -73,24 +79,24 @@ export function SelectionStep({ document, selected, onSelectedChange, onBack, on
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="出演者名を検索"
-            aria-label="出演者名を検索"
+            placeholder={t("search")}
+            aria-label={t("search")}
           />
         </label>
         <select
           value={type}
           onChange={(e) => setType(e.target.value as ScheduleType | "all")}
-          aria-label="種別で絞り込み"
+          aria-label={t("typeFilter")}
         >
-          <option value="all">すべての種別</option>
-          {Object.entries(scheduleTypeLabels).map(([value, label]) => (
+          <option value="all">{t("allTypes")}</option>
+          {scheduleTypes.map((value) => (
             <option key={value} value={value}>
-              {label}
+              {tCommon(`scheduleTypes.${value}`)}
             </option>
           ))}
         </select>
-        <select value={stage} onChange={(e) => setStage(e.target.value)} aria-label="ステージで絞り込み">
-          <option value="all">すべてのステージ</option>
+        <select value={stage} onChange={(e) => setStage(e.target.value)} aria-label={t("stageFilter")}>
+          <option value="all">{t("allStages")}</option>
           {stages.map((value) => (
             <option key={value}>{value}</option>
           ))}
@@ -100,10 +106,10 @@ export function SelectionStep({ document, selected, onSelectedChange, onBack, on
           type="button"
           onClick={() => onSelectedChange(new Set([...selected, ...filtered.map((item) => item.id)]))}
         >
-          表示中を全選択
+          {t("selectVisible")}
         </button>
         <button className="text-button" type="button" onClick={() => onSelectedChange(new Set())}>
-          全解除
+          {t("clearAll")}
         </button>
       </section>
       <div className="selection-layout">
@@ -118,9 +124,14 @@ export function SelectionStep({ document, selected, onSelectedChange, onBack, on
                     <label className="artist-check">
                       <input type="checkbox" checked={allSelected} onChange={() => toggleArtist(artist)} />
                       <span className="custom-check">{allSelected ? <Check size={14} /> : null}</span>
-                      <strong>{artist || "名称未入力"}</strong>
+                      <strong>{artist || t("unnamed")}</strong>
                     </label>
-                    <span>{items.length}予定</span>
+                    <span>
+                      {t("artistScheduleCount", {
+                        count: items.length,
+                        formattedCount: formatNumber(items.length, language),
+                      })}
+                    </span>
                   </header>
                   <div className="schedule-cards">
                     {items
@@ -137,23 +148,19 @@ export function SelectionStep({ document, selected, onSelectedChange, onBack, on
                           />
                           <span className={`type-stripe ${item.type}`} />
                           <span className="schedule-time">
-                            {item.startTime ?? "未定"}
+                            {item.startTime ?? tCommon("unset")}
                             <small>{item.endTime ? `– ${item.endTime}` : ""}</small>
                           </span>
                           <span className="schedule-meta">
-                            <strong>{scheduleTypeLabels[item.type]}</strong>
+                            <strong>{tCommon(`scheduleTypes.${item.type}`)}</strong>
                             <small>
-                              {[item.stage, item.booth].filter(Boolean).join(" / ") || "場所未設定"}
+                              {[item.stage, item.booth].filter(Boolean).join(" / ") || t("unsetPlace")}
                             </small>
                           </span>
                           {conflictIds.has(item.id) ? (
                             <AlertTriangle
                               size={18}
-                              aria-label={
-                                invalidTimeRanges.has(item.id)
-                                  ? "終了時刻が開始時刻以前です"
-                                  : "時間が重複しています"
-                              }
+                              aria-label={invalidTimeRanges.has(item.id) ? t("invalidRange") : t("overlap")}
                             />
                           ) : null}
                         </label>
@@ -163,66 +170,74 @@ export function SelectionStep({ document, selected, onSelectedChange, onBack, on
               );
             })
           ) : (
-            <div className="empty-state panel">条件に一致する予定がありません。</div>
+            <div className="empty-state panel">{t("empty")}</div>
           )}
         </section>
         <aside className="selection-summary panel">
           <span className="eyebrow">YOUR DAY</span>
-          <h2>選択した予定</h2>
+          <h2>{t("summary")}</h2>
           {selectedItems.length ? (
             <ol>
               {selectedItems
                 .toSorted((a, b) => (a.startTime ?? "99:99").localeCompare(b.startTime ?? "99:99"))
                 .map((item) => (
                   <li key={item.id}>
-                    <time>{item.startTime ?? "未定"}</time>
+                    <time>{item.startTime ?? tCommon("unset")}</time>
                     <span>
                       <strong>{item.artist}</strong>
                       <small>
-                        {scheduleTypeLabels[item.type]} · {item.stage ?? item.booth ?? "場所未定"}
+                        {tCommon(scheduleTypeKey(item.type))} · {item.stage ?? item.booth ?? t("unsetPlace")}
                       </small>
                     </span>
                   </li>
                 ))}
             </ol>
           ) : (
-            <p className="muted">左の一覧から予定を選んでください。</p>
+            <p className="muted">{t("choosePrompt")}</p>
           )}
           <label className="buffer-control">
-            <span>移動時間の余裕</span>
+            <span>{t("buffer")}</span>
             <select value={buffer} onChange={(e) => setBuffer(Number(e.target.value))}>
-              <option value={0}>なし</option>
-              <option value={5}>5分</option>
-              <option value={10}>10分</option>
-              <option value={15}>15分</option>
-              <option value={30}>30分</option>
+              <option value={0}>{t("noBuffer")}</option>
+              {[5, 10, 15, 30].map((minutes) => (
+                <option value={minutes} key={minutes}>
+                  {t("minutes", { count: minutes, formattedCount: formatNumber(minutes, language) })}
+                </option>
+              ))}
             </select>
           </label>
           {conflicts.length || invalidTimeRanges.size ? (
             <div className="conflict-box">
               <AlertTriangle size={18} />
               <span>
-                <strong>{conflicts.length + invalidTimeRanges.size}件の注意</strong>
-                {invalidTimeRanges.size
-                  ? "終了時刻が開始時刻以前の予定があります。"
-                  : "予定の重なり、または移動時間が不足しています。"}
+                <strong>
+                  {t("warningCount", {
+                    count: conflicts.length + invalidTimeRanges.size,
+                    formattedCount: formatNumber(conflicts.length + invalidTimeRanges.size, language),
+                  })}
+                </strong>
+                {invalidTimeRanges.size ? t("invalidRangeSummary") : t("conflictSummary")}
               </span>
             </div>
           ) : selected.size ? (
             <div className="safe-box">
-              <Check size={17} /> 時間の重なりはありません
+              <Check size={17} /> {t("noConflict")}
             </div>
           ) : null}
         </aside>
       </div>
       <div className="footer-actions">
         <button className="ghost-button" type="button" onClick={onBack}>
-          確認へ戻る
+          {t("back")}
         </button>
         <button className="primary-button" type="button" disabled={!selected.size} onClick={onNext}>
-          タイムラインを作る
+          {t("next")}
         </button>
       </div>
     </main>
   );
+}
+
+function scheduleTypeKey(type: ScheduleType): `scheduleTypes.${ScheduleType}` {
+  return `scheduleTypes.${type}`;
 }

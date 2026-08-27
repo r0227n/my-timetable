@@ -1,4 +1,5 @@
-import { scheduleTypeLabels, type ScheduleItem, type TimetableDocument } from "../domain/timetable";
+import { AppError, errorCode, type AppErrorCode } from "../domain/errors";
+import type { ScheduleItem, ScheduleType, TimetableDocument } from "../domain/timetable";
 
 export interface GoogleCalendarEvent {
   summary: string;
@@ -16,27 +17,30 @@ export interface GoogleCalendarAdapter {
 export interface CalendarRegistrationResult {
   scheduleId: string;
   success: boolean;
-  message: string;
+  messageCode: "registrationSuccess" | "registrationFailed";
+  errorCode?: AppErrorCode;
 }
 
 export async function registerSchedulesWithGoogleCalendar(
   document: TimetableDocument,
   schedules: ScheduleItem[],
   adapter: GoogleCalendarAdapter,
+  scheduleTypeLabels: Record<ScheduleType, string>,
 ): Promise<CalendarRegistrationResult[]> {
-  if (!document.event.date) throw new Error("Google Calendar登録には開催日が必要です。");
+  if (!document.event.date) throw new AppError("googleDateRequired");
   const registerable = schedules.filter(isCalendarScheduleRegisterable);
   const accessToken = registerable.length ? await adapter.authorize() : "";
   return await Promise.all(
     registerable.map(async (schedule): Promise<CalendarRegistrationResult> => {
       try {
-        await adapter.insertEvent(accessToken, toGoogleEvent(document, schedule));
-        return { scheduleId: schedule.id, success: true, message: "登録しました" };
+        await adapter.insertEvent(accessToken, toGoogleEvent(document, schedule, scheduleTypeLabels));
+        return { scheduleId: schedule.id, success: true, messageCode: "registrationSuccess" };
       } catch (error) {
         return {
           scheduleId: schedule.id,
           success: false,
-          message: error instanceof Error ? error.message : "登録に失敗しました",
+          messageCode: "registrationFailed",
+          errorCode: errorCode(error, "googleRegistrationFailed"),
         };
       }
     }),
@@ -53,16 +57,12 @@ export function createBrowserGoogleCalendarAdapter(clientId: string): GoogleCale
           scope: "https://www.googleapis.com/auth/calendar.events",
           callback: (response) => {
             if (response.error || !response.access_token) {
-              reject(
-                new Error(
-                  response.error_description || response.error || "Google認証を完了できませんでした。",
-                ),
-              );
+              reject(new AppError("googleAuthFailed"));
               return;
             }
             resolve(response.access_token);
           },
-          error_callback: () => reject(new Error("Google認証がキャンセルされました。")),
+          error_callback: () => reject(new AppError("googleAuthCancelled")),
         });
         tokenClient.requestAccessToken({ prompt: "consent" });
       });
@@ -76,12 +76,16 @@ export function createBrowserGoogleCalendarAdapter(clientId: string): GoogleCale
         },
         body: JSON.stringify(event),
       });
-      if (!response.ok) throw new Error(`Google Calendarへの登録に失敗しました (${response.status})`);
+      if (!response.ok) throw new AppError("googleInsertFailed", { status: response.status });
     },
   };
 }
 
-function toGoogleEvent(document: TimetableDocument, schedule: ScheduleItem): GoogleCalendarEvent {
+function toGoogleEvent(
+  document: TimetableDocument,
+  schedule: ScheduleItem,
+  scheduleTypeLabels: Record<ScheduleType, string>,
+): GoogleCalendarEvent {
   const date = document.event.date!;
   const location = schedule.stage ?? schedule.booth ?? document.event.venue ?? undefined;
   return {
@@ -120,7 +124,7 @@ function loadGoogleIdentityServices(): Promise<void> {
     script.src = "https://accounts.google.com/gsi/client";
     script.async = true;
     script.onload = () => resolve();
-    script.onerror = () => reject(new Error("Google認証ライブラリを読み込めませんでした。"));
+    script.onerror = () => reject(new AppError("googleScriptLoadFailed"));
     document.head.append(script);
   });
   return googleScript;

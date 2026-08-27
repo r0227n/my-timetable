@@ -2,6 +2,16 @@ import { describe, expect, it } from "vitest";
 import { createBlankSchedule, createEmptyDocument } from "./timetable";
 import { buildIcsCalendar, buildTimelineSvg, createExportFileName } from "./export";
 
+const scheduleTypeLabels = { live: "LIVE", meet_and_greet: "Meet & Greet", merch: "Merch", other: "Other" };
+const exportLabels = {
+  scheduleTypes: scheduleTypeLabels,
+  timelineDescription: (count: number) => `Timeline with ${count} schedules`,
+  untimed: "Time not set",
+  unsetTime: "TBD",
+  conflict: "Conflict",
+  formatDate: (date: string) => date,
+};
+
 const document = {
   ...createEmptyDocument(),
   event: {
@@ -25,19 +35,24 @@ const document = {
 
 describe("timeline export", () => {
   it("renders selected schedules as safe standalone SVG", () => {
-    const svg = buildTimelineSvg(document, document.schedules, {
-      width: 1080,
-      height: 1350,
-      background: "#ffffff",
-      accent: "#df5d3d",
-      title: "My Day",
-      layout: "vertical",
-      showDate: true,
-      showVenue: true,
-      showType: true,
-      showStage: true,
-      showBooth: true,
-    });
+    const svg = buildTimelineSvg(
+      document,
+      document.schedules,
+      {
+        width: 1080,
+        height: 1350,
+        background: "#ffffff",
+        accent: "#df5d3d",
+        title: "My Day",
+        layout: "vertical",
+        showDate: true,
+        showVenue: true,
+        showType: true,
+        showStage: true,
+        showBooth: true,
+      },
+      exportLabels,
+    );
 
     expect(svg).toContain('viewBox="0 0 1080 1350"');
     expect(svg).toContain("Artist &lt;A&gt;");
@@ -46,7 +61,7 @@ describe("timeline export", () => {
 
   it("creates a calendar with stable event details and excludes untimed schedules", () => {
     const untimed = createBlankSchedule({ id: "untimed", artist: "Later", relativeTimeLabel: "終演後" });
-    const ics = buildIcsCalendar(document, [...document.schedules, untimed]);
+    const ics = buildIcsCalendar(document, [...document.schedules, untimed], scheduleTypeLabels);
 
     expect(ics).toContain("DTSTART;TZID=Asia/Tokyo:20260827T100000");
     expect(ics).toContain("DTEND;TZID=Asia/Tokyo:20260827T103000");
@@ -65,19 +80,24 @@ describe("timeline export", () => {
       createBlankSchedule({ id: "near", artist: "Near", startTime: "10:30", endTime: "11:00" }),
       createBlankSchedule({ id: "late", artist: "Late", startTime: "18:00", endTime: "18:30" }),
     ];
-    const svg = buildTimelineSvg(document, schedules, {
-      width: 1080,
-      height: 1920,
-      background: "#ffffff",
-      accent: "#df5d3d",
-      title: "My Day",
-      layout: "vertical",
-      showDate: true,
-      showVenue: true,
-      showType: true,
-      showStage: true,
-      showBooth: true,
-    });
+    const svg = buildTimelineSvg(
+      document,
+      schedules,
+      {
+        width: 1080,
+        height: 1920,
+        background: "#ffffff",
+        accent: "#df5d3d",
+        title: "My Day",
+        layout: "vertical",
+        showDate: true,
+        showVenue: true,
+        showType: true,
+        showStage: true,
+        showBooth: true,
+      },
+      exportLabels,
+    );
     const parsed = new DOMParser().parseFromString(svg, "image/svg+xml");
     const position = (id: string, attribute: "x" | "y") =>
       Number(parsed.querySelector(`[data-schedule-id="${id}"] rect`)?.getAttribute(attribute));

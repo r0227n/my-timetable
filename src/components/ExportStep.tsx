@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   buildIcsCalendar,
   buildTimelineSvg,
@@ -14,6 +15,10 @@ import {
   selectFailedCalendarSchedules,
   type CalendarRegistrationResult,
 } from "../services/google-calendar";
+import { localizeError } from "../i18n/errors";
+import { useExportLabels } from "../i18n/use-export-labels";
+import { formatNumber } from "../i18n/format";
+import { currentLanguage } from "../i18n/i18n";
 
 interface ExportStepProps {
   document: TimetableDocument;
@@ -23,11 +28,18 @@ interface ExportStepProps {
 }
 
 export function ExportStep({ document, schedules, options, onBack }: ExportStepProps) {
+  const { t } = useTranslation("export");
+  const { t: tCommon } = useTranslation("common");
+  const labels = useExportLabels();
+  const language = currentLanguage();
   const [message, setMessage] = useState<string | null>(null);
   const [googleState, setGoogleState] = useState<"idle" | "confirm" | "working">("idle");
   const [googleResults, setGoogleResults] = useState<CalendarRegistrationResult[]>([]);
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
-  const svg = useMemo(() => buildTimelineSvg(document, schedules, options), [document, options, schedules]);
+  const svg = useMemo(
+    () => buildTimelineSvg(document, schedules, options, labels),
+    [document, labels, options, schedules],
+  );
   const fileName = createExportFileName(document);
   const unverifiedLowConfidence = schedules.filter(
     (schedule) => schedule.confidence === "low" && !schedule.verified,
@@ -36,11 +48,11 @@ export function ExportStep({ document, schedules, options, onBack }: ExportStepP
   const failedSchedules = selectFailedCalendarSchedules(schedules, googleResults);
   const saveIcs = () => {
     try {
-      const ics = buildIcsCalendar(document, schedules);
+      const ics = buildIcsCalendar(document, schedules, labels.scheduleTypes);
       downloadBlob(new Blob([ics], { type: "text/calendar;charset=utf-8" }), `${fileName}.ics`);
-      setMessage("ICSを保存しました。");
+      setMessage(t("icsSaved"));
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "ICSを保存できませんでした。");
+      setMessage(localizeError(error, "icsSaveFailed"));
     }
   };
   const registerGoogleCalendar = async (
@@ -55,6 +67,7 @@ export function ExportStep({ document, schedules, options, onBack }: ExportStepP
         document,
         targets,
         createBrowserGoogleCalendarAdapter(googleClientId),
+        labels.scheduleTypes,
       );
       setGoogleResults((current) => {
         if (!preserveResults) return results;
@@ -62,9 +75,9 @@ export function ExportStep({ document, schedules, options, onBack }: ExportStepP
         results.forEach((result) => merged.set(result.scheduleId, result));
         return [...merged.values()];
       });
-      setMessage("Google Calendarへの登録処理が完了しました。");
+      setMessage(t("registrationComplete"));
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Google Calendarへ登録できませんでした。");
+      setMessage(localizeError(error, "googleRegistrationFailed"));
     } finally {
       setGoogleState("idle");
     }
@@ -75,20 +88,27 @@ export function ExportStep({ document, schedules, options, onBack }: ExportStepP
       <div className="workspace-heading">
         <div>
           <span className="eyebrow">07 / EXPORT</span>
-          <h1>タイムラインを書き出す</h1>
-          <p>{schedules.length}件の予定を確認して、必要な形式で保存してください。</p>
+          <h1>{t("heading")}</h1>
+          <p>
+            {t("description", {
+              count: schedules.length,
+              formattedCount: formatNumber(schedules.length, language),
+            })}
+          </p>
         </div>
       </div>
       {unverifiedLowConfidence.length ? (
         <div className="export-warning" role="alert">
-          low信頼度の未確認予定が{unverifiedLowConfidence.length}
-          件あります。元画像と照合してから出力してください。
+          {t("lowConfidenceWarning", {
+            count: unverifiedLowConfidence.length,
+            formattedCount: formatNumber(unverifiedLowConfidence.length, language),
+          })}
         </div>
       ) : null}
       <section className="export-grid">
         <article className="panel export-card">
-          <h2>画像</h2>
-          <p>編集可能なSVG、または高解像度PNGとして保存します。</p>
+          <h2>{t("image")}</h2>
+          <p>{t("imageDescription")}</p>
           <button
             className="primary-button"
             type="button"
@@ -96,7 +116,7 @@ export function ExportStep({ document, schedules, options, onBack }: ExportStepP
               downloadBlob(new Blob([svg], { type: "image/svg+xml;charset=utf-8" }), `${fileName}.svg`)
             }
           >
-            SVGを保存
+            {t("saveSvg")}
           </button>
           <button
             className="ghost-button"
@@ -105,27 +125,25 @@ export function ExportStep({ document, schedules, options, onBack }: ExportStepP
               void svgToPngBlob(svg, options.width, options.height)
                 .then((blob) => {
                   downloadBlob(blob, `${fileName}.png`);
-                  setMessage("PNGを保存しました。");
+                  setMessage(t("pngSaved"));
                 })
-                .catch((error: unknown) =>
-                  setMessage(error instanceof Error ? error.message : "PNGを保存できませんでした。"),
-                )
+                .catch((error: unknown) => setMessage(localizeError(error, "pngSaveFailed")))
             }
           >
-            PNGを保存
+            {t("savePng")}
           </button>
         </article>
         <article className="panel export-card">
-          <h2>カレンダー</h2>
-          <p>日時が確定した予定を主要カレンダーへ取り込めるICSとして保存します。</p>
-          {!document.event.date ? <p className="form-error">ICS出力には開催日を入力してください。</p> : null}
+          <h2>{t("calendar")}</h2>
+          <p>{t("calendarDescription")}</p>
+          {!document.event.date ? <p className="form-error">{t("icsDateRequired")}</p> : null}
           <button className="primary-button" type="button" disabled={!document.event.date} onClick={saveIcs}>
-            ICSを保存
+            {t("saveIcs")}
           </button>
         </article>
         <article className="panel export-card">
           <h2>Google Calendar</h2>
-          <p>OAuth設定済み環境では、選択した予定を直接登録できます。</p>
+          <p>{t("googleDescription")}</p>
           <button
             className="ghost-button"
             type="button"
@@ -137,42 +155,50 @@ export function ExportStep({ document, schedules, options, onBack }: ExportStepP
             }
             onClick={() => setGoogleState("confirm")}
           >
-            Google Calendarへ登録
+            {t("registerGoogle")}
           </button>
-          {!googleClientId ? <small>Google OAuthクライアント設定後に利用できます。</small> : null}
+          {!googleClientId ? <small>{t("googleUnavailable")}</small> : null}
           {googleState === "confirm" ? (
             <fieldset className="calendar-confirm">
-              <legend className="sr-only">Google Calendar登録の最終確認</legend>
-              <strong>次の{registerableSchedules.length}件をGoogleへ送信します</strong>
+              <legend className="sr-only">{t("confirmLegend")}</legend>
+              <strong>
+                {t("confirmCount", {
+                  count: registerableSchedules.length,
+                  formattedCount: formatNumber(registerableSchedules.length, language),
+                })}
+              </strong>
               <ul>
                 {registerableSchedules.map((schedule) => (
                   <li key={schedule.id}>
-                    {schedule.startTime ?? "未定"} {schedule.artist}
+                    {schedule.startTime ?? tCommon("unset")} {schedule.artist}
                   </li>
                 ))}
               </ul>
               <div className="action-row">
                 <button className="text-button" type="button" onClick={() => setGoogleState("idle")}>
-                  キャンセル
+                  {t("cancel")}
                 </button>
                 <button
                   className="primary-button"
                   type="button"
                   onClick={() => void registerGoogleCalendar(registerableSchedules)}
                 >
-                  登録を確定
+                  {t("confirm")}
                 </button>
               </div>
             </fieldset>
           ) : null}
           {googleResults.length ? (
             <>
-              <ul className="calendar-results" aria-label="Google Calendar登録結果">
+              <ul className="calendar-results" aria-label={t("results")}>
                 {googleResults.map((result) => {
                   const schedule = schedules.find((item) => item.id === result.scheduleId);
                   return (
                     <li className={result.success ? "success" : "failure"} key={result.scheduleId}>
-                      {schedule?.artist ?? result.scheduleId}: {result.message}
+                      {schedule?.artist ?? result.scheduleId}:{" "}
+                      {result.success
+                        ? t(result.messageCode)
+                        : tCommon(`errors.${result.errorCode ?? "googleRegistrationFailed"}`)}
                     </li>
                   );
                 })}
@@ -184,7 +210,7 @@ export function ExportStep({ document, schedules, options, onBack }: ExportStepP
                   disabled={googleState === "working"}
                   onClick={() => void registerGoogleCalendar(failedSchedules, true)}
                 >
-                  失敗分だけ再試行
+                  {t("retryFailed")}
                 </button>
               ) : null}
             </>
@@ -194,7 +220,7 @@ export function ExportStep({ document, schedules, options, onBack }: ExportStepP
       {message ? <output className="export-message">{message}</output> : null}
       <div className="footer-actions">
         <button className="ghost-button" type="button" onClick={onBack}>
-          タイムラインへ戻る
+          {t("back")}
         </button>
       </div>
     </main>

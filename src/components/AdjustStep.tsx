@@ -1,5 +1,6 @@
 import { RotateCcw, RotateCw, SlidersHorizontal, Undo2 } from "lucide-react";
 import { defaultAdjustments, type ImageAdjustments } from "../lib/image";
+import { useTranslation } from "react-i18next";
 
 interface AdjustStepProps {
   sourceUrl: string;
@@ -10,6 +11,8 @@ interface AdjustStepProps {
 }
 
 export function AdjustStep({ sourceUrl, adjustments, onChange, onBack, onAnalyze }: AdjustStepProps) {
+  const { t } = useTranslation("adjust");
+  const { t: tCommon } = useTranslation("common");
   const setCrop = (side: keyof ImageAdjustments["crop"], value: number) => {
     const crop = { ...adjustments.crop, [side]: value };
     const horizontal = crop.left + crop.right;
@@ -22,15 +25,15 @@ export function AdjustStep({ sourceUrl, adjustments, onChange, onBack, onAnalyze
       <div className="workspace-heading">
         <div>
           <span className="eyebrow">02 / ADJUST</span>
-          <h1>画像を読みやすく整える</h1>
-          <p>文字が水平になるように回転し、不要な余白を切り取ってください。</p>
+          <h1>{t("heading")}</h1>
+          <p>{t("description")}</p>
         </div>
         <button className="ghost-button" type="button" onClick={() => onChange(defaultAdjustments)}>
-          <Undo2 size={16} /> 元に戻す
+          <Undo2 size={16} /> {t("reset")}
         </button>
       </div>
       <div className="adjust-layout">
-        <section className="preview-panel" aria-label="調整後の画像プレビュー">
+        <section className="preview-panel" aria-label={t("previewLabel")}>
           <div className="image-stage">
             <div
               className="crop-frame"
@@ -40,19 +43,19 @@ export function AdjustStep({ sourceUrl, adjustments, onChange, onBack, onAnalyze
             />
             <img
               src={sourceUrl}
-              alt="アップロードしたタイムテーブル"
+              alt={t("imageAlt")}
               style={{
                 transform: `rotate(${adjustments.rotation}deg)`,
                 filter: `brightness(${adjustments.brightness}%) contrast(${adjustments.contrast}%)`,
               }}
             />
           </div>
-          <p>枠の外側は解析から除外されます</p>
+          <p>{t("outsideCrop")}</p>
         </section>
         <aside className="controls-panel">
           <div className="control-section">
             <h2>
-              <RotateCw size={17} /> 回転
+              <RotateCw size={17} /> {t("rotation")}
             </h2>
             <div className="button-pair">
               <button
@@ -64,7 +67,7 @@ export function AdjustStep({ sourceUrl, adjustments, onChange, onBack, onAnalyze
                   })
                 }
               >
-                <RotateCcw size={17} /> 左へ90°
+                <RotateCcw size={17} /> {t("rotateLeft")}
               </button>
               <button
                 type="button"
@@ -75,16 +78,16 @@ export function AdjustStep({ sourceUrl, adjustments, onChange, onBack, onAnalyze
                   })
                 }
               >
-                <RotateCw size={17} /> 右へ90°
+                <RotateCw size={17} /> {t("rotateRight")}
               </button>
             </div>
           </div>
           <div className="control-section">
             <h2>
-              <SlidersHorizontal size={17} /> 明るさ・コントラスト
+              <SlidersHorizontal size={17} /> {t("brightnessContrast")}
             </h2>
             <RangeControl
-              label="明るさ"
+              label={t("brightness")}
               value={adjustments.brightness}
               min={50}
               max={150}
@@ -92,7 +95,7 @@ export function AdjustStep({ sourceUrl, adjustments, onChange, onBack, onAnalyze
               onChange={(value) => onChange({ ...adjustments, brightness: value })}
             />
             <RangeControl
-              label="コントラスト"
+              label={t("contrast")}
               value={adjustments.contrast}
               min={50}
               max={180}
@@ -101,12 +104,12 @@ export function AdjustStep({ sourceUrl, adjustments, onChange, onBack, onAnalyze
             />
           </div>
           <div className="control-section">
-            <h2>切り抜き</h2>
+            <h2>{t("crop")}</h2>
             <div className="crop-grid">
               {(["top", "bottom", "left", "right"] as const).map((side) => (
                 <RangeControl
                   key={side}
-                  label={{ top: "上", bottom: "下", left: "左", right: "右" }[side]}
+                  label={t(side)}
                   value={adjustments.crop[side]}
                   min={0}
                   max={40}
@@ -118,10 +121,10 @@ export function AdjustStep({ sourceUrl, adjustments, onChange, onBack, onAnalyze
           </div>
           <div className="action-row">
             <button className="ghost-button" type="button" onClick={onBack}>
-              戻る
+              {tCommon("back")}
             </button>
             <button className="primary-button" type="button" onClick={onAnalyze}>
-              解析を開始
+              {t("start")}
             </button>
           </div>
         </aside>

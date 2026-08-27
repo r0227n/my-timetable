@@ -1,0 +1,20 @@
+{
+  "heading": "画像を読みやすく整える",
+  "description": "文字が水平になるように回転し、不要な余白を切り取ってください。",
+  "reset": "元に戻す",
+  "previewLabel": "調整後の画像プレビュー",
+  "imageAlt": "アップロードしたタイムテーブル",
+  "outsideCrop": "枠の外側は解析から除外されます",
+  "rotation": "回転",
+  "rotateLeft": "左へ90°",
+  "rotateRight": "右へ90°",
+  "brightnessContrast": "明るさ・コントラスト",
+  "brightness": "明るさ",
+  "contrast": "コントラスト",
+  "crop": "切り抜き",
+  "top": "上",
+  "bottom": "下",
+  "left": "左",
+  "right": "右",
+  "start": "解析を開始"
+}

@@ -1,0 +1,13 @@
+{
+  "failedHeading": "Analysis could not be completed",
+  "heading": "Reading the image",
+  "preparing": "Preparing the image",
+  "modelMessage": "Preparing the AI models",
+  "ocrMessage": "Reading text from the image",
+  "gemmaMessage": "Structuring the extracted data",
+  "steps": { "model": "Get models", "ocr": "Read text", "gemma": "Structure data" },
+  "downloadInfo": "The first run downloads about 2.8 GB for GLM-OCR and Gemma. Time varies with device and connection speed.",
+  "cancel": "Cancel analysis",
+  "retry": "Try again",
+  "manual": "Continue with manual entry"
+}

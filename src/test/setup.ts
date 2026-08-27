@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
-import { afterEach } from "vitest";
+import { afterEach, beforeAll, beforeEach } from "vitest";
+import i18n, { initializeI18n } from "../i18n/i18n";
 
 afterEach(cleanup);
 
@@ -21,3 +22,12 @@ const localStorageMock: Storage = {
 };
 
 Object.defineProperty(globalThis, "localStorage", { value: localStorageMock });
+
+beforeAll(async () => {
+  await initializeI18n();
+});
+
+beforeEach(async () => {
+  storage.clear();
+  await i18n.changeLanguage("ja");
+});

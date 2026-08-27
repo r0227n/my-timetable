@@ -80,6 +80,20 @@ describe("Phase 1 manual flow", () => {
     expect(screen.getByLabelText("撮影等の属性")).toBeInTheDocument();
   });
 
+  it("switches language without losing in-progress data", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole("button", { name: "画像を使わず手入力ではじめる" }));
+    await user.type(screen.getByLabelText("出演者名"), "Artist A");
+
+    await user.selectOptions(screen.getByLabelText("表示言語"), "en");
+
+    expect(await screen.findByRole("heading", { name: "Review the extracted data" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Artist")).toHaveValue("Artist A");
+    expect(document.documentElement.lang).toBe("en");
+    expect(localStorage.getItem("ui.language")).toBe("en");
+  });
+
   it("continues from selection to timeline and export", async () => {
     const user = userEvent.setup();
     render(<App />);

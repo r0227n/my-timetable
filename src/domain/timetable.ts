@@ -56,13 +56,6 @@ export type ScheduleType = z.infer<typeof scheduleTypeSchema>;
 export type ScheduleItem = z.infer<typeof scheduleItemSchema>;
 export type TimetableDocument = z.infer<typeof timetableDocumentSchema>;
 
-export const scheduleTypeLabels: Record<ScheduleType, string> = {
-  live: "LIVE",
-  meet_and_greet: "特典会",
-  merch: "物販",
-  other: "その他",
-};
-
 export function createBlankSchedule(overrides: Partial<ScheduleItem> = {}): ScheduleItem {
   return {
     id: crypto.randomUUID(),

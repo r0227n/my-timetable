@@ -1,0 +1,18 @@
+{
+  "heroLine1": "Turn the moments you want",
+  "heroLine2": "into one clear plan.",
+  "description": "Upload an event timetable and choose the artists you want to see. Build your day entirely on this device.",
+  "privacyTitle": "Your image never leaves this device",
+  "privacyDescription": "Reading and organization happen entirely in this browser.",
+  "heading": "Add a timetable",
+  "drop": "Drop an image",
+  "choose": "or click to choose",
+  "fileHint": "JPEG / PNG / WebP · up to 20 MB",
+  "manual": "Start with manual entry",
+  "webGpuSupported": "WebGPU supported",
+  "webGpuUnsupported": "WebGPU unavailable",
+  "aiAvailable": "AI analysis is available",
+  "manualAvailable": "Manual entry is available",
+  "firstModel": "Initial models",
+  "localOnly": "On-device processing only"
+}

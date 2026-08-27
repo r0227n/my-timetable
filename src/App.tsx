@@ -13,18 +13,18 @@ import type { TimelineOptions } from "./domain/export";
 import { defaultAdjustments, renderAdjustedImage, type ImageAdjustments } from "./lib/image";
 import { analyzeTimetable, type AnalysisUpdate } from "./services/analysis";
 import { clearAllModelCaches } from "./services/model-cache";
+import { useTranslation } from "react-i18next";
+import { localizeError } from "./i18n/errors";
 
 type AnalysisState = {
   stage: "preparing" | "model" | "ocr" | "gemma" | "error";
   progress: number | null;
-  message: string;
   error: string | null;
 };
 
 const initialAnalysis: AnalysisState = {
   stage: "preparing",
   progress: null,
-  message: "画像を準備しています",
   error: null,
 };
 
@@ -43,6 +43,7 @@ const initialTimelineOptions: TimelineOptions = {
 };
 
 export default function App() {
+  const { t } = useTranslation(["common", "analysis"]);
   const [step, setStep] = useState(0);
   const [sourceUrl, setSourceUrl] = useState<string | null>(null);
   const [analysisImageUrl, setAnalysisImageUrl] = useState<string | null>(null);
@@ -96,7 +97,7 @@ export default function App() {
       setAnalysis((current) => ({
         ...current,
         stage: "error",
-        error: error instanceof Error ? error.message : "解析に失敗しました。",
+        error: localizeError(error, "analysisFailed"),
       }));
     } finally {
       if (controller.current === nextController) controller.current = null;
@@ -107,7 +108,6 @@ export default function App() {
     setAnalysis({
       stage: update.step === "ocr" ? (update.stage === "recognition" ? "ocr" : "model") : "gemma",
       progress: update.progress,
-      message: update.message,
       error: null,
     });
   };
@@ -125,9 +125,9 @@ export default function App() {
         onClearModelCache={async () => {
           try {
             await clearAllModelCaches();
-            window.alert("AIモデルのキャッシュを削除しました。");
+            window.alert(t("header.cacheCleared"));
           } catch {
-            window.alert("AIモデルのキャッシュを削除できませんでした。");
+            window.alert(t("header.cacheClearFailed"));
           }
         }}
       />
@@ -202,7 +202,7 @@ export default function App() {
       ) : null}
       <footer className="app-footer">
         <span>MY TIMETABLE · MVP</span>
-        <span>画像・予定データは保存されません</span>
+        <span>{t("footer")}</span>
       </footer>
     </div>
   );

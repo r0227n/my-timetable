@@ -7,7 +7,7 @@ describe("validateImageFile", () => {
   });
 
   it("rejects unsupported types and oversized images", () => {
-    expect(validateImageFile({ type: "image/heic", size: 1024 } as File)).toContain("JPEG");
-    expect(validateImageFile({ type: "image/png", size: maxFileSize + 1 } as File)).toContain("20MB");
+    expect(validateImageFile({ type: "image/heic", size: 1024 } as File)).toBe("imageInvalidType");
+    expect(validateImageFile({ type: "image/png", size: maxFileSize + 1 } as File)).toBe("imageTooLarge");
   });
 });

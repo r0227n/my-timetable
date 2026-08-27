@@ -1,0 +1,20 @@
+{
+  "heading": "Prepare the image for reading",
+  "description": "Rotate the image until the text is level, then crop unnecessary margins.",
+  "reset": "Reset",
+  "previewLabel": "Adjusted image preview",
+  "imageAlt": "Uploaded timetable",
+  "outsideCrop": "Anything outside the frame is excluded from analysis",
+  "rotation": "Rotation",
+  "rotateLeft": "Rotate left 90°",
+  "rotateRight": "Rotate right 90°",
+  "brightnessContrast": "Brightness and contrast",
+  "brightness": "Brightness",
+  "contrast": "Contrast",
+  "crop": "Crop",
+  "top": "Top",
+  "bottom": "Bottom",
+  "left": "Left",
+  "right": "Right",
+  "start": "Start analysis"
+}

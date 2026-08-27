@@ -1,0 +1,52 @@
+{
+  "brandTop": "My Timetable home",
+  "language": { "label": "Display language", "ja": "日本語", "en": "English" },
+  "header": {
+    "clearCache": "Clear AI model cache",
+    "cacheCleared": "The AI model cache was cleared.",
+    "cacheClearFailed": "The AI model cache could not be cleared.",
+    "lightTheme": "Use light theme",
+    "darkTheme": "Use dark theme"
+  },
+  "steps": {
+    "label": "Creation steps",
+    "image": "Image",
+    "adjust": "Adjust",
+    "analysis": "Analyze",
+    "review": "Review",
+    "selection": "Select",
+    "timeline": "Edit",
+    "export": "Export"
+  },
+  "footer": "Images and schedule data are not saved",
+  "back": "Back",
+  "unset": "TBD",
+  "scheduleTypes": { "live": "LIVE", "meet_and_greet": "Meet & Greet", "merch": "Merch", "other": "Other" },
+  "confidence": { "high": "high", "medium": "medium", "low": "low" },
+  "attribute": { "unknown": "unconfirmed", "yes": "yes", "no": "no" },
+  "errors": {
+    "analysisFailed": "Analysis failed.",
+    "analysisNoText": "No text could be read from the image. Adjust the image or continue with manual entry.",
+    "imageInvalidType": "Select a JPEG, PNG, or WebP image.",
+    "imageTooLarge": "The image must be 20 MB or smaller.",
+    "imageProcessFailed": "The image could not be processed.",
+    "imageGenerateFailed": "The image could not be generated.",
+    "imageLoadFailed": "The image could not be loaded.",
+    "pngGenerateFailed": "The PNG could not be generated.",
+    "svgToPngFailed": "The SVG preview could not be converted to PNG.",
+    "icsDateRequired": "An event date is required to export an ICS file.",
+    "icsSaveFailed": "The ICS file could not be saved.",
+    "pngSaveFailed": "The PNG could not be saved.",
+    "googleDateRequired": "An event date is required for Google Calendar.",
+    "googleAuthFailed": "Google authorization could not be completed.",
+    "googleAuthCancelled": "Google authorization was cancelled.",
+    "googleInsertFailed": "The Google Calendar event could not be created ({{status}})",
+    "googleScriptLoadFailed": "The Google authorization library could not be loaded.",
+    "googleRegistrationFailed": "The schedules could not be added to Google Calendar.",
+    "gemmaWebGpuRequired": "Gemma requires Chrome or Edge with WebGPU support.",
+    "gemmaInvalidJson": "Gemma's response could not be read as JSON. You can correct it manually.",
+    "gemmaInvalidData": "Gemma's response contains unresolved fields. Correct them manually.",
+    "gemmaDownloadFailed": "The Gemma model could not be downloaded. Check your connection.",
+    "gemmaDataFailed": "The Gemma model data could not be read."
+  }
+}
