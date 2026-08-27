@@ -1,0 +1,93 @@
+name: Bug report
+description: 仕様と異なる動作や不具合を報告する
+title: ""
+labels: [bug, needs-triage]
+body:
+  - type: markdown
+    attributes:
+      value: 再現可能な手順と、期待する動作・実際の動作の差を記載してください。
+  - type: textarea
+    id: summary
+    attributes:
+      label: 概要
+      description: 対象と事象を短く要約してください。
+    validations:
+      required: true
+  - type: textarea
+    id: background
+    attributes:
+      label: 背景・影響
+      description: 誰が、どの場面で、どのような影響を受けるかを記載してください。
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 再現手順
+      description: 初期状態から順番に再現操作を記載してください。
+      placeholder: "1. ...\n2. ...\n3. ..."
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期待する動作
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 実際の動作
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: 発生環境
+      description: OS、ブラウザとバージョン、端末、WebGPU対応状況などを記載してください。
+    validations:
+      required: true
+  - type: textarea
+    id: spec
+    attributes:
+      label: 関連仕様
+      description: 期待結果の根拠となる docs/SPEC.md の節を記載してください。
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 証拠
+      description: ログ、エラー原文、公開済みのスクリーンショットURLを記載してください。ない場合は「なし」と記載してください。
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: 完了条件
+      description: 修正を確認できるチェックリストを記載してください。
+      placeholder: "- [ ] 条件1\n- [ ] 条件2"
+    validations:
+      required: true
+  - type: input
+    id: discovered-at
+    attributes:
+      label: Agent発見日時
+      description: AI Agentが発見した場合のみISO 8601形式で記載してください。
+      placeholder: "2026-08-27T10:00:00+09:00"
+  - type: textarea
+    id: verification
+    attributes:
+      label: Agentの検証方法
+      description: AI Agentが確認した操作、コマンド、観測結果を記載してください。
+  - type: dropdown
+    id: confidence
+    attributes:
+      label: Agentの信頼度
+      description: AI Agentが起票する場合のみ選択してください。
+      options: [high, medium, low]
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: 補足
+      description: 関連Issueがあれば記載してください。

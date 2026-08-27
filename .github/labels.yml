@@ -1,0 +1,13 @@
+labels:
+  - name: bug
+    color: d73a4a
+    description: 仕様と異なる動作や不具合
+  - name: enhancement
+    color: a2eeef
+    description: 新機能または既存機能の改善
+  - name: agent-created
+    color: 5319e7
+    description: AI Agentによって起票されたIssue
+  - name: needs-triage
+    color: fbca04
+    description: 人間による内容確認と優先度判断が必要

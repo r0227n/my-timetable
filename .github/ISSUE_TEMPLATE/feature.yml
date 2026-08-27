@@ -1,0 +1,80 @@
+name: Feature request
+description: 新機能や既存機能の改善を提案する
+title: ""
+labels: [enhancement, needs-triage]
+body:
+  - type: markdown
+    attributes:
+      value: 提案ありがとうございます。実装完了を判断できる具体的な条件まで記載してください。
+  - type: textarea
+    id: summary
+    attributes:
+      label: 概要
+      description: 提案を短く要約してください。
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: 解決したい課題・背景
+      description: 誰が、どの場面で、何に困っているかを記載してください。
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 提案内容
+      description: 期待する振る舞いを具体的に記載してください。
+    validations:
+      required: true
+  - type: textarea
+    id: user-flow
+    attributes:
+      label: 対象ユーザーフロー
+      description: 影響する画面、操作、前後の流れを記載してください。
+    validations:
+      required: true
+  - type: textarea
+    id: spec
+    attributes:
+      label: 関連仕様
+      description: docs/SPEC.md の節を記載してください。該当しない場合は「なし」と記載してください。
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 検討した代替案
+      description: 代替案と採用しなかった理由を記載してください。未検討の場合は「なし」と記載してください。
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: 完了条件
+      description: 検証可能なチェックリストで記載してください。
+      placeholder: "- [ ] 条件1\n- [ ] 条件2"
+    validations:
+      required: true
+  - type: input
+    id: discovered-at
+    attributes:
+      label: Agent発見日時
+      description: AI Agentが発見した場合のみISO 8601形式で記載してください。
+      placeholder: "2026-08-27T10:00:00+09:00"
+  - type: textarea
+    id: verification
+    attributes:
+      label: Agentの検証方法
+      description: AI Agentが確認した操作、コマンド、観測結果を記載してください。
+  - type: dropdown
+    id: confidence
+    attributes:
+      label: Agentの信頼度
+      description: AI Agentが起票する場合のみ選択してください。
+      options: [high, medium, low]
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: 補足
+      description: 公開済みの証拠URLや関連Issueがあれば記載してください。
