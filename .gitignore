@@ -20,11 +20,6 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# Locally installed agent skills (reproducible from skills-lock.json)
-.agents/skills/*
-!.agents/skills/github-issue-ticket/
-!.agents/skills/github-issue-ticket/**
-
 # Editor and operating-system files
 .DS_Store
 .idea/

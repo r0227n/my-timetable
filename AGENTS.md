@@ -24,6 +24,16 @@
 5. UIまたはユーザーフローに影響する変更は、`agent-browser` で実際の画面を操作して動作確認する。主要フロー、入力、エラー表示、画面遷移を確認し、必要に応じてスクリーンショットやブラウザ上の状態を証拠として残す。
 6. 仕様、実装、テストが一致し、関連する確認がすべて成功した時点で完了とする。
 
+## Worktree方針
+
+- 実装作業は1 Issueにつき1 branch、1 worktreeへ分離し、複数Issueを並列に進められる状態を保つ。
+- worktreeの確認と作成にはgit標準コマンドを直接使わず、`git gtr list --porcelain`と`git gtr new <branch> --from origin/develop --porcelain`を使用する。
+- `git gtr new`が返す`path`内だけで対象Issueの編集、検証、commit、push、PR作成を行う。終了コードが0でない場合は作成失敗として扱う。
+- `hook_status`が`skipped-untrusted`または`partial`なら報告する。Agentは`git gtr trust`を実行しない。
+- 並行作業間でworktreeやbranchを共有しない。既存worktreeがある場合は`git gtr list --porcelain`のpathを再利用する。
+- worktree削除、強制cleanup、branch削除は、ユーザーが対象を明示して依頼した場合だけ行う。
+- IssueからPRまで進める作業では`issue-workflow`を使用し、既存PRの再開やbase選択を含む詳細手順に従う。
+
 ## 完了時の報告
 
 変更内容、破壊的変更の有無、実行した検証、未解決事項を簡潔に報告する。検証できなかった項目がある場合は、その理由と残るリスクを明示する。
