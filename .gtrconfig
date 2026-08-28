@@ -1,0 +1,7 @@
+[hooks]
+    postCreate = bun install --frozen-lockfile
+
+[defaults]
+    editor = vscode
+    ai = codex
+    remote = origin
