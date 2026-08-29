@@ -27,7 +27,7 @@
   "back": "戻る",
   "unset": "未定",
   "scheduleTypes": { "live": "LIVE", "meet_and_greet": "特典会", "merch": "物販", "other": "その他" },
-  "confidence": { "high": "high", "medium": "medium", "low": "low" },
+  "confidence": { "high": "高", "medium": "中", "low": "低" },
   "attribute": { "unknown": "未確認", "yes": "はい", "no": "いいえ" },
   "errors": {
     "analysisFailed": "解析に失敗しました。",

@@ -119,7 +119,7 @@ describe("Phase 1 manual flow", () => {
 
     expect(await screen.findByRole("heading", { name: "タイムラインを整える" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "出力へ進む" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("low信頼度の未確認予定が1件");
+    expect(await screen.findByRole("alert")).toHaveTextContent("低信頼度の未確認予定が1件");
     expect(screen.getByRole("button", { name: "SVGを保存" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "PNGを保存" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "ICSを保存" })).toBeInTheDocument();

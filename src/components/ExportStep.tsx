@@ -107,6 +107,7 @@ export function ExportStep({ document, schedules, options, onBack }: ExportStepP
           {t("lowConfidenceWarning", {
             count: unverifiedLowConfidence.length,
             formattedCount: formatNumber(unverifiedLowConfidence.length, language),
+            confidence: tCommon("confidence.low"),
           })}
         </div>
       ) : null}
