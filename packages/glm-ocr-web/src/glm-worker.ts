@@ -13,21 +13,33 @@ worker.onmessage = async (event: MessageEvent<{ type: "recognize"; image: Blob }
 
   controller = new AbortController();
   const engine = new GlmOcrEngine();
+  let response:
+    | { type: "result"; result: Awaited<ReturnType<GlmOcrEngine["recognize"]>> }
+    | { type: "error"; name: string; message: string };
   try {
     const result = await engine.recognize(
       event.data.image,
       (progress) => worker.postMessage({ type: "progress", progress }),
       controller.signal,
     );
-    worker.postMessage({ type: "result", result });
+    response = { type: "result", result };
   } catch (error) {
-    worker.postMessage({
+    response = {
       type: "error",
       name: error instanceof DOMException ? error.name : "Error",
       message: error instanceof Error ? error.message : "GLM-OCRに失敗しました。",
-    });
-  } finally {
-    await engine.dispose();
-    controller = null;
+    };
   }
+
+  try {
+    await engine.dispose();
+  } catch (error) {
+    response = {
+      type: "error",
+      name: "Error",
+      message: error instanceof Error ? error.message : "GLM-OCRの解放に失敗しました。",
+    };
+  }
+  controller = null;
+  worker.postMessage(response);
 };
