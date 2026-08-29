@@ -1,6 +1,11 @@
 {
   "brandTop": "My Timetable トップ",
-  "language": { "label": "表示言語", "ja": "日本語", "en": "English" },
+  "language": {
+    "label": "表示言語",
+    "button": "表示言語: {{language}}",
+    "ja": "日本語",
+    "en": "English"
+  },
   "header": {
     "clearCache": "AIモデルのキャッシュを削除",
     "cacheCleared": "AIモデルのキャッシュを削除しました。",

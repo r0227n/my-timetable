@@ -1,7 +1,8 @@
-import { CalendarDays, DatabaseZap, Moon, Sun } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { CalendarDays, Check, ChevronDown, DatabaseZap, Languages, Moon, Sun } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { changeUiLanguage, currentLanguage } from "../i18n/i18n";
-import { supportedLanguages, type SupportedLanguage } from "../i18n/config";
+import { supportedLanguages } from "../i18n/config";
 
 interface AppHeaderProps {
   dark: boolean;
@@ -12,6 +13,27 @@ interface AppHeaderProps {
 export function AppHeader({ dark, onToggleTheme, onClearModelCache }: AppHeaderProps) {
   const { t } = useTranslation("common");
   const language = currentLanguage();
+  const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
+  const languageMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!languageMenuOpen) return;
+
+    const closeOnOutsideClick = (event: PointerEvent) => {
+      if (!languageMenuRef.current?.contains(event.target as Node)) setLanguageMenuOpen(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setLanguageMenuOpen(false);
+    };
+
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [languageMenuOpen]);
+
   return (
     <header className="app-header">
       <a className="brand" href="./" aria-label={t("brandTop")}>
@@ -21,20 +43,39 @@ export function AppHeader({ dark, onToggleTheme, onClearModelCache }: AppHeaderP
         <span>MY TIMETABLE</span>
       </a>
       <div className="header-actions">
-        <label className="language-select">
-          <span className="sr-only">{t("language.label")}</span>
-          <select
-            aria-label={t("language.label")}
-            value={language}
-            onChange={(event) => void changeUiLanguage(event.target.value as SupportedLanguage)}
+        <div className="language-menu" ref={languageMenuRef}>
+          <button
+            className="language-button"
+            type="button"
+            onClick={() => setLanguageMenuOpen((open) => !open)}
+            aria-label={t("language.button", { language: t(`language.${language}`) })}
+            aria-haspopup="menu"
+            aria-expanded={languageMenuOpen}
           >
-            {supportedLanguages.map((value) => (
-              <option value={value} key={value}>
-                {t(`language.${value}`)}
-              </option>
-            ))}
-          </select>
-        </label>
+            <Languages size={18} aria-hidden="true" />
+            <span>{t(`language.${language}`)}</span>
+            <ChevronDown size={15} aria-hidden="true" />
+          </button>
+          {languageMenuOpen && (
+            <div className="language-dropdown" role="menu" aria-label={t("language.label")}>
+              {supportedLanguages.map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={value === language}
+                  onClick={() => {
+                    setLanguageMenuOpen(false);
+                    if (value !== language) void changeUiLanguage(value);
+                  }}
+                >
+                  <span>{t(`language.${value}`)}</span>
+                  {value === language && <Check size={16} aria-hidden="true" />}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <button
           className="icon-button"
           type="button"

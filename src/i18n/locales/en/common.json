@@ -1,6 +1,11 @@
 {
   "brandTop": "My Timetable home",
-  "language": { "label": "Display language", "ja": "日本語", "en": "English" },
+  "language": {
+    "label": "Display language",
+    "button": "Display language: {{language}}",
+    "ja": "日本語",
+    "en": "English"
+  },
   "header": {
     "clearCache": "Clear AI model cache",
     "cacheCleared": "The AI model cache was cleared.",
