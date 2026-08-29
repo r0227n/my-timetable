@@ -15,6 +15,7 @@ export function AppHeader({ dark, onToggleTheme, onClearModelCache }: AppHeaderP
   const language = currentLanguage();
   const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
   const languageMenuRef = useRef<HTMLDivElement>(null);
+  const languageButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!languageMenuOpen) return;
@@ -45,6 +46,7 @@ export function AppHeader({ dark, onToggleTheme, onClearModelCache }: AppHeaderP
       <div className="header-actions">
         <div className="language-menu" ref={languageMenuRef}>
           <button
+            ref={languageButtonRef}
             className="language-button"
             type="button"
             onClick={() => setLanguageMenuOpen((open) => !open)}
@@ -64,9 +66,13 @@ export function AppHeader({ dark, onToggleTheme, onClearModelCache }: AppHeaderP
                   type="button"
                   role="menuitemradio"
                   aria-checked={value === language}
-                  onClick={() => {
+                  onClick={async () => {
                     setLanguageMenuOpen(false);
-                    if (value !== language) void changeUiLanguage(value);
+                    try {
+                      if (value !== language) await changeUiLanguage(value);
+                    } finally {
+                      languageButtonRef.current?.focus();
+                    }
                   }}
                 >
                   <span>{t(`language.${value}`)}</span>

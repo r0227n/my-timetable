@@ -100,7 +100,9 @@ describe("Phase 1 manual flow", () => {
     expect(screen.getByLabelText("Artist")).toHaveValue("Artist A");
     expect(document.documentElement.lang).toBe("en");
     expect(localStorage.getItem("ui.language")).toBe("en");
-    expect(screen.getByRole("button", { name: "Display language: English" })).toBeInTheDocument();
+    const languageButton = screen.getByRole("button", { name: "Display language: English" });
+    expect(languageButton).toBeInTheDocument();
+    expect(languageButton).toHaveFocus();
   });
 
   it("continues from selection to timeline and export", async () => {
