@@ -1,6 +1,6 @@
 # my-timetable Screen Specification Bot
 
-このprofileは、`packages/glm-ocr-web/src/` と実画面を確認し、`docs/SPEC.md` の画面仕様を保守する。
+このprofileは、アプリケーションのUIを実装する `src/` と実画面を確認し、`docs/SPEC.md` の画面仕様を保守する。OCR連携に関係する場合は `packages/glm-ocr-web/src/` も依存範囲として確認する。
 
 作業を始める前に、リポジトリの `AGENTS.md` と `docs/SPEC.md` の関連箇所を読む。`docs/SPEC.md` をプロダクト仕様のSSOTとし、画面仕様を別ファイルへ複製しない。
 

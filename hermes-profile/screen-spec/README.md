@@ -1,6 +1,6 @@
 # my-timetable Screen Specification Bot
 
-`my-timetable-screen-spec` は、GLM-OCR Webパッケージの画面仕様を週次で保守するHermes Botです。
+`my-timetable-screen-spec` は、アプリケーションの `src/` と実画面を確認し、画面仕様を週次で保守するHermes Botです。OCR連携に関係する場合は `packages/glm-ocr-web/src/` も依存範囲として確認します。
 
 ## 担当範囲
 
