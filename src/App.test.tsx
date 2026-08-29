@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
 import App from "./App";
@@ -119,7 +119,8 @@ describe("Phase 1 manual flow", () => {
 
     expect(await screen.findByRole("heading", { name: "タイムラインを整える" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "出力へ進む" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("低信頼度の未確認予定が1件");
+    const warning = await screen.findByRole("alert");
+    await waitFor(() => expect(warning).toHaveTextContent("低信頼度の未確認予定が1件"));
     expect(screen.getByRole("button", { name: "SVGを保存" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "PNGを保存" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "ICSを保存" })).toBeInTheDocument();

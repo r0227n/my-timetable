@@ -37,6 +37,7 @@
     "ocrInvalidOutput": "GLM-OCR returned an invalid output format. Adjust the image and try again.",
     "imageInvalidType": "Select a JPEG, PNG, or WebP image.",
     "imageTooLarge": "The image must be 20 MB or smaller.",
+    "imageMultipleFiles": "Select only one image.",
     "imageProcessFailed": "The image could not be processed.",
     "imageGenerateFailed": "The image could not be generated.",
     "imageLoadFailed": "The image could not be loaded.",
