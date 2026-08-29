@@ -90,6 +90,7 @@ Run a quick test:
 
 ```bash
 echo '{"tool_input":{"command":"git push origin main"}}' | <path-to-script>
+echo '{"tool_input":{"command":"git -C /workspace/project push origin main"}}' | <path-to-script>
 ```
 
-Should exit with code 2 and print a BLOCKED message to stderr.
+Both commands should exit with code 2 and print a BLOCKED message to stderr. Also verify a safe command such as `git -C /workspace/project status` exits 0.
