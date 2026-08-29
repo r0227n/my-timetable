@@ -205,7 +205,10 @@ export function ExportStep({ document, schedules, options, onBack }: ExportStepP
                       {schedule?.artist ?? result.scheduleId}:{" "}
                       {result.success
                         ? t(result.messageCode)
-                        : tCommon(`errors.${result.errorCode ?? "googleRegistrationFailed"}`)}
+                        : tCommon(
+                            `errors.${result.errorCode ?? "googleRegistrationFailed"}`,
+                            result.errorDetails,
+                          )}
                     </li>
                   );
                 })}

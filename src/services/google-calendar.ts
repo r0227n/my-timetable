@@ -1,4 +1,4 @@
-import { AppError, errorCode, type AppErrorCode } from "../domain/errors";
+import { AppError, errorCode, errorDetails, type AppErrorCode } from "../domain/errors";
 import type { ScheduleItem, ScheduleType, TimetableDocument } from "../domain/timetable";
 
 export interface GoogleCalendarEvent {
@@ -19,6 +19,7 @@ export interface CalendarRegistrationResult {
   success: boolean;
   messageCode: "registrationSuccess" | "registrationFailed";
   errorCode?: AppErrorCode;
+  errorDetails?: Record<string, string | number>;
 }
 
 export async function registerSchedulesWithGoogleCalendar(
@@ -41,6 +42,7 @@ export async function registerSchedulesWithGoogleCalendar(
           success: false,
           messageCode: "registrationFailed",
           errorCode: errorCode(error, "googleRegistrationFailed"),
+          errorDetails: errorDetails(error),
         };
       }
     }),
