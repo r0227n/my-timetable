@@ -19,6 +19,7 @@
   "overlap": "時間が重複しています",
   "empty": "条件に一致する予定がありません。",
   "summary": "選択した予定",
+  "summaryEyebrow": "あなたの一日",
   "choosePrompt": "左の一覧から予定を選んでください。",
   "buffer": "移動時間の余裕",
   "noBuffer": "なし",

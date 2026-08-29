@@ -174,7 +174,7 @@ export function SelectionStep({ document, selected, onSelectedChange, onBack, on
           )}
         </section>
         <aside className="selection-summary panel">
-          <span className="eyebrow">YOUR DAY</span>
+          <span className="eyebrow">{t("summaryEyebrow")}</span>
           <h2>{t("summary")}</h2>
           {selectedItems.length ? (
             <ol>

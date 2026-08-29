@@ -19,6 +19,7 @@
   "overlap": "This schedule overlaps another",
   "empty": "No schedules match these filters.",
   "summary": "Selected schedules",
+  "summaryEyebrow": "YOUR DAY",
   "choosePrompt": "Choose schedules from the list.",
   "buffer": "Travel buffer",
   "noBuffer": "None",
