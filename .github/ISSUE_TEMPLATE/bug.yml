@@ -51,7 +51,7 @@ body:
     id: spec
     attributes:
       label: 関連仕様
-      description: 期待結果の根拠となる docs/SPEC.md の節を記載してください。
+      description: 期待結果の根拠となる docs/SPEC.md の節を記載してください。仕様変更が必要な場合は、変更対象と期待内容を明記してください。
     validations:
       required: true
   - type: textarea
@@ -79,7 +79,9 @@ body:
     id: verification
     attributes:
       label: Agentの検証方法
-      description: AI Agentが確認した操作、コマンド、観測結果を記載してください。
+      description: AI Agentが確認した操作、コマンド、観測結果を記載してください。未確認の場合は理由を記載してください。
+    validations:
+      required: true
   - type: dropdown
     id: confidence
     attributes:

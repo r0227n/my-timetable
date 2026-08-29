@@ -11,3 +11,15 @@ labels:
   - name: needs-triage
     color: fbca04
     description: 人間による内容確認と優先度判断が必要
+  - name: bot:execute
+    color: 0e8a16
+    description: 人間がBotへ実装、PR作成、条件成立後のmergeを許可
+  - name: bot:running
+    color: 1d76db
+    description: BotがIssueを取得して実行中
+  - name: bot:done
+    color: 6f42c1
+    description: BotがPRのmergeまで完了
+  - name: bot:blocked
+    color: b60205
+    description: 人間の判断または外部状態の変更を待機中

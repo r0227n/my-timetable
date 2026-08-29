@@ -98,24 +98,29 @@ bun run build
 
 ソース整形にはOxfmt、静的解析にはOxlintを使用します。
 
-## Hermes profileをセットアップする
+## Hermes Botをセットアップする
 
-Hermesの再現可能な設定は [`hermes-profile/`](hermes-profile/) でGit管理しています。モデル設定、profileの指示、distribution manifestが対象です。APIキーを格納する `.env`、会話履歴、メモリ、ログ、キャッシュ、データベースなどの機密情報・端末固有データはリポジトリへ保存しません。
+Hermesの再現可能な設定は [`hermes-profile/`](hermes-profile/) でGit管理しています。用途ごとに独立したprofileとし、画面仕様メンテナンスとドキュメントレビューの指示、会話、記憶、スキル、Routineを分離します。APIキーを格納する `.env`、会話履歴、メモリ、ログ、キャッシュ、データベースなどの機密情報・端末固有データはリポジトリへ保存しません。
 
 ### 初回セットアップ
 
 リポジトリのルートでprofile distributionをインストールします。
 
 ```sh
-hermes profile install ./hermes-profile --name my-timetable --alias -y
-hermes -p my-timetable project create "my-timetable" "$PWD" \
+hermes profile install ./hermes-profile/screen-spec --name my-timetable-screen-spec --alias -y
+hermes -p my-timetable-screen-spec project create "my-timetable" "$PWD" \
+  --slug my-timetable --primary "$PWD" --use
+
+hermes profile install ./hermes-profile/docs-review --name my-timetable-docs-review --alias -y
+hermes -p my-timetable-docs-review project create "my-timetable" "$PWD" \
   --slug my-timetable --primary "$PWD" --use
 ```
 
-これにより、`my-timetable` コマンドで専用profileを起動でき、このリポジトリがHermes projectのprimary folderとして参照されます。
+これにより、`my-timetable-screen-spec` と `my-timetable-docs-review` を独立して起動でき、このリポジトリが各Hermes projectのprimary folderとして参照されます。どちらも毎週土曜日11:00に動作し、前者は画面仕様、後者は `docs/` 配下のレビューだけを担当します。
 
 ```sh
-my-timetable chat
+my-timetable-screen-spec chat
+my-timetable-docs-review chat
 ```
 
 ローカルのOllama互換エンドポイント `http://127.0.0.1:11434/v1` と、既定モデル `orcarouter/Qwen3.8-27B-Uncensored:latest` を使用します。モデルは事前に利用可能な状態にしてください。
@@ -125,18 +130,20 @@ my-timetable chat
 `hermes-profile/` の更新を取得した後、次を実行します。
 
 ```sh
-hermes profile update my-timetable --force-config -y
+hermes profile update my-timetable-screen-spec --force-config -y
+hermes profile update my-timetable-docs-review --force-config -y
 ```
 
 `--force-config` により、ローカルの `config.yaml` をGit管理された設定で置き換えます。`.env`、履歴、メモリなどのユーザーデータはHermesの更新対象外であり、そのまま保持されます。
 
-既存の `my-timetable` profileを初めてGit管理へ移行する場合は、次のようにローカルdistributionを紐付け直します。
+各profileを初めてGit管理へ移行する場合は、次のようにローカルdistributionを紐付け直します。
 
 ```sh
-hermes profile install ./hermes-profile --name my-timetable --alias --force -y
+hermes profile install ./hermes-profile/screen-spec --name my-timetable-screen-spec --alias --force -y
+hermes profile install ./hermes-profile/docs-review --name my-timetable-docs-review --alias --force -y
 ```
 
-設定を変更するときは `~/.hermes/profiles/my-timetable/` を直接編集せず、`hermes-profile/` を更新してGitへコミットし、上記の同期コマンドを実行してください。
+設定を変更するときは `~/.hermes/profiles/` 内を直接編集せず、対応する `hermes-profile/screen-spec/` または `hermes-profile/docs-review/` を更新してGitへコミットし、上記の同期コマンドを実行してください。旧 `my-timetable` profileは新しい2 profileへ自動移行されないため、不要になった時点で手動で整理してください。
 
 ## AI実行基盤
 
