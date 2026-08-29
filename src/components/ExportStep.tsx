@@ -133,9 +133,7 @@ export function ExportStep({ document, schedules, options, onBack }: ExportStepP
                   downloadBlob(blob, `${fileName}.png`);
                   setMessage({ type: "translation", key: "pngSaved" });
                 })
-                .catch((error: unknown) =>
-                  setMessage({ type: "error", error, fallback: "pngSaveFailed" }),
-                )
+                .catch((error: unknown) => setMessage({ type: "error", error, fallback: "pngSaveFailed" }))
             }
           >
             {t("savePng")}
