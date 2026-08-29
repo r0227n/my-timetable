@@ -1,9 +1,9 @@
-import type { OcrEngine, OcrProgress, OcrResult } from "./types";
+import { OcrError, type OcrEngine, type OcrErrorCode, type OcrProgress, type OcrResult } from "./types";
 
 type WorkerResponse =
   | { type: "progress"; progress: OcrProgress }
   | { type: "result"; result: OcrResult }
-  | { type: "error"; name: string; message: string };
+  | { type: "error"; name: string; message: string; code?: OcrErrorCode };
 
 export class WorkerOcrEngine implements OcrEngine {
   readonly kind = "glm-ocr" as const;
@@ -36,6 +36,7 @@ export class WorkerOcrEngine implements OcrEngine {
         finish();
         if (response.type === "result") resolve(response.result);
         else if (response.name === "AbortError") reject(new DOMException(response.message, "AbortError"));
+        else if (response.code) reject(new OcrError(response.code));
         else reject(new Error(response.message));
       };
       worker.onerror = (event) => {

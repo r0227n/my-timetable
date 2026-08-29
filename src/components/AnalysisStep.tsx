@@ -1,31 +1,31 @@
 import { AlertTriangle, BrainCircuit, Check, LoaderCircle, Square } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface AnalysisStepProps {
   stage: "preparing" | "model" | "ocr" | "gemma" | "error";
   progress: number | null;
-  message: string;
   error: string | null;
   onCancel: () => void;
   onManual: () => void;
   onRetry: () => void;
 }
 
-const steps = [
-  ["model", "モデル取得"],
-  ["ocr", "文字認識"],
-  ["gemma", "データ整形"],
-] as const;
+const steps = ["model", "ocr", "gemma"] as const;
 
-export function AnalysisStep({
-  stage,
-  progress,
-  message,
-  error,
-  onCancel,
-  onManual,
-  onRetry,
-}: AnalysisStepProps) {
-  const activeIndex = stage === "preparing" ? 0 : steps.findIndex(([key]) => key === stage);
+export function AnalysisStep({ stage, progress, error, onCancel, onManual, onRetry }: AnalysisStepProps) {
+  const { t } = useTranslation("analysis");
+  const activeIndex = stage === "preparing" ? 0 : steps.findIndex((key) => key === stage);
+  const message =
+    error ??
+    t(
+      stage === "preparing"
+        ? "preparing"
+        : stage === "model"
+          ? "modelMessage"
+          : stage === "ocr"
+            ? "ocrMessage"
+            : "gemmaMessage",
+    );
   return (
     <main className="analysis-shell">
       <section className="analysis-card">
@@ -33,8 +33,8 @@ export function AnalysisStep({
           {error ? <AlertTriangle size={34} /> : <BrainCircuit size={38} />}
         </div>
         <span className="eyebrow">03 / ANALYZE</span>
-        <h1>{error ? "解析を完了できませんでした" : "画像を読み取っています"}</h1>
-        <output className="analysis-message">{error ?? message}</output>
+        <h1>{error ? t("failedHeading") : t("heading")}</h1>
+        <output className="analysis-message">{message}</output>
         {!error ? (
           <>
             <div className="progress-track">
@@ -44,7 +44,7 @@ export function AnalysisStep({
               />
             </div>
             <div className="analysis-steps">
-              {steps.map(([key, label], index) => (
+              {steps.map((key, index) => (
                 <div
                   className={index < activeIndex ? "complete" : index === activeIndex ? "active" : ""}
                   key={key}
@@ -58,24 +58,22 @@ export function AnalysisStep({
                       index + 1
                     )}
                   </span>
-                  {label}
+                  {t(`steps.${key}`)}
                 </div>
               ))}
             </div>
-            <div className="info-box">
-              初回はGLM-OCRとGemmaを合わせて約2.8GB取得します。時間は端末性能と回線速度によって変わります。
-            </div>
+            <div className="info-box">{t("downloadInfo")}</div>
             <button className="ghost-button" type="button" onClick={onCancel}>
-              <Square size={13} /> 解析を中止
+              <Square size={13} /> {t("cancel")}
             </button>
           </>
         ) : (
           <div className="error-actions">
             <button className="ghost-button" type="button" onClick={onRetry}>
-              もう一度試す
+              {t("retry")}
             </button>
             <button className="primary-button" type="button" onClick={onManual}>
-              手入力で続ける
+              {t("manual")}
             </button>
           </div>
         )}

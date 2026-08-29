@@ -1,18 +1,20 @@
 import { Check } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
-const steps = ["画像", "調整", "解析", "確認", "選択", "編集", "出力"];
+const steps = ["image", "adjust", "analysis", "review", "selection", "timeline", "export"] as const;
 
 export function StepNav({ current }: { current: number }) {
+  const { t } = useTranslation("common");
   return (
-    <nav className="step-nav" aria-label="作成ステップ">
-      {steps.map((label, index) => (
+    <nav className="step-nav" aria-label={t("steps.label")}>
+      {steps.map((key, index) => (
         <div
           className={`step ${index === current ? "current" : ""} ${index < current ? "done" : ""}`}
-          key={label}
+          key={key}
           aria-current={index === current ? "step" : undefined}
         >
           <span className="step-dot">{index < current ? <Check size={13} /> : index + 1}</span>
-          <span>{label}</span>
+          <span>{t(`steps.${key}`)}</span>
         </div>
       ))}
     </nav>

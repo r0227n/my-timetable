@@ -1,6 +1,7 @@
 /// <reference lib="webworker" />
 
 import { GlmOcrEngine } from "./glm-engine";
+import { OcrError, type OcrErrorCode } from "./types";
 
 const worker = self as DedicatedWorkerGlobalScope;
 let controller: AbortController | null = null;
@@ -15,7 +16,7 @@ worker.onmessage = async (event: MessageEvent<{ type: "recognize"; image: Blob }
   const engine = new GlmOcrEngine();
   let response:
     | { type: "result"; result: Awaited<ReturnType<GlmOcrEngine["recognize"]>> }
-    | { type: "error"; name: string; message: string };
+    | { type: "error"; name: string; message: string; code?: OcrErrorCode };
   try {
     const result = await engine.recognize(
       event.data.image,
@@ -28,6 +29,7 @@ worker.onmessage = async (event: MessageEvent<{ type: "recognize"; image: Blob }
       type: "error",
       name: error instanceof DOMException ? error.name : "Error",
       message: error instanceof Error ? error.message : "GLM-OCRに失敗しました。",
+      ...(error instanceof OcrError ? { code: error.code } : {}),
     };
   }
 

@@ -1,0 +1,13 @@
+{
+  "failedHeading": "解析を完了できませんでした",
+  "heading": "画像を読み取っています",
+  "preparing": "画像を準備しています",
+  "modelMessage": "AIモデルを準備しています",
+  "ocrMessage": "画像から文字を読み取っています",
+  "gemmaMessage": "読み取り結果を整理しています",
+  "steps": { "model": "モデル取得", "ocr": "文字認識", "gemma": "データ整形" },
+  "downloadInfo": "初回はGLM-OCRとGemmaを合わせて約2.8GB取得します。時間は端末性能と回線速度によって変わります。",
+  "cancel": "解析を中止",
+  "retry": "もう一度試す",
+  "manual": "手入力で続ける"
+}

@@ -1,10 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import { createBlankSchedule, createEmptyDocument } from "../domain/timetable";
+import { AppError } from "../domain/errors";
 import {
   registerSchedulesWithGoogleCalendar,
   selectFailedCalendarSchedules,
   type GoogleCalendarAdapter,
 } from "./google-calendar";
+
+const scheduleTypeLabels = { live: "LIVE", meet_and_greet: "Meet & Greet", merch: "Merch", other: "Other" };
 
 describe("Google Calendar registration", () => {
   it("registers timed schedules and reports untimed schedules separately", async () => {
@@ -26,7 +29,12 @@ describe("Google Calendar registration", () => {
       insertEvent,
     };
 
-    const results = await registerSchedulesWithGoogleCalendar(document, [timed, untimed], adapter);
+    const results = await registerSchedulesWithGoogleCalendar(
+      document,
+      [timed, untimed],
+      adapter,
+      scheduleTypeLabels,
+    );
 
     expect(insertEvent).toHaveBeenCalledWith(
       "memory-only-token",
@@ -35,7 +43,7 @@ describe("Google Calendar registration", () => {
         start: { dateTime: "2026-08-27T10:00:00", timeZone: "Asia/Tokyo" },
       }),
     );
-    expect(results).toEqual([{ scheduleId: "timed", success: true, message: "登録しました" }]);
+    expect(results).toEqual([{ scheduleId: "timed", success: true, messageCode: "registrationSuccess" }]);
   });
 
   it("selects only failed registerable schedules for retry", () => {
@@ -47,12 +55,39 @@ describe("Google Calendar registration", () => {
       selectFailedCalendarSchedules(
         [failed, succeeded, untimed],
         [
-          { scheduleId: "failed", success: false, message: "failed" },
-          { scheduleId: "succeeded", success: true, message: "ok" },
-          { scheduleId: "untimed", success: false, message: "missing time" },
+          { scheduleId: "failed", success: false, messageCode: "registrationFailed" },
+          { scheduleId: "succeeded", success: true, messageCode: "registrationSuccess" },
+          { scheduleId: "untimed", success: false, messageCode: "registrationFailed" },
         ],
       ),
     ).toEqual([failed]);
+  });
+
+  it("preserves interpolation details from Google Calendar failures", async () => {
+    const document = {
+      ...createEmptyDocument(),
+      event: { ...createEmptyDocument().event, date: "2026-08-27" },
+    };
+    const schedule = createBlankSchedule({ id: "failed", startTime: "10:00", endTime: "10:30" });
+
+    const results = await registerSchedulesWithGoogleCalendar(
+      document,
+      [schedule],
+      {
+        authorize: async () => "token",
+        insertEvent: async () => {
+          throw new AppError("googleInsertFailed", { status: 429 });
+        },
+      },
+      scheduleTypeLabels,
+    );
+
+    expect(results[0]).toMatchObject({
+      scheduleId: "failed",
+      success: false,
+      errorCode: "googleInsertFailed",
+      errorDetails: { status: 429 },
+    });
   });
 
   it("registers an explicitly confirmed overnight schedule on the following date", async () => {
@@ -68,10 +103,15 @@ describe("Google Calendar registration", () => {
     });
     const insertEvent = vi.fn<GoogleCalendarAdapter["insertEvent"]>(async () => undefined);
 
-    await registerSchedulesWithGoogleCalendar(document, [overnight], {
-      authorize: async () => "token",
-      insertEvent,
-    });
+    await registerSchedulesWithGoogleCalendar(
+      document,
+      [overnight],
+      {
+        authorize: async () => "token",
+        insertEvent,
+      },
+      scheduleTypeLabels,
+    );
 
     expect(insertEvent).toHaveBeenCalledWith(
       "token",

@@ -15,12 +15,12 @@ export async function svgToPngBlob(svg: string, width: number, height: number, s
     canvas.width = Math.round(width * scale);
     canvas.height = Math.round(height * scale);
     const context = canvas.getContext("2d");
-    if (!context) throw new Error("PNGを生成できませんでした。");
+    if (!context) throw new AppError("pngGenerateFailed");
     context.scale(scale, scale);
     context.drawImage(image, 0, 0, width, height);
     return await new Promise<Blob>((resolve, reject) => {
       canvas.toBlob(
-        (blob) => (blob ? resolve(blob) : reject(new Error("PNGを生成できませんでした。"))),
+        (blob) => (blob ? resolve(blob) : reject(new AppError("pngGenerateFailed"))),
         "image/png",
       );
     });
@@ -33,7 +33,8 @@ function loadImage(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const image = new Image();
     image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error("SVGプレビューをPNGへ変換できませんでした。"));
+    image.onerror = () => reject(new AppError("svgToPngFailed"));
     image.src = url;
   });
 }
+import { AppError } from "../domain/errors";

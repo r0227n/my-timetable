@@ -8,10 +8,10 @@ import {
 } from "../domain/timetable";
 import type { OcrResult } from "@my-timetable/glm-ocr-web";
 import { modelConfig } from "./model-config";
+import { AppError } from "../domain/errors";
 
 export interface GemmaProgress {
   progress: number | null;
-  message: string;
 }
 
 type GemmaWorkerResponse =
@@ -69,10 +69,10 @@ export async function structureWithGemmaInWorker(
   onProgress: (progress: GemmaProgress) => void,
   signal: AbortSignal,
 ): Promise<TimetableDocument> {
-  if (!navigator.gpu) throw new Error("Gemmaの実行にはWebGPU対応のChromeまたはEdgeが必要です。");
-  onProgress({ progress: 0, message: "Gemmaモデルを取得しています" });
+  if (!navigator.gpu) throw new AppError("gemmaWebGpuRequired");
+  onProgress({ progress: 0 });
   const modelStream = await loadModelStream(onProgress, signal);
-  if (signal.aborted) throw new DOMException("解析を中止しました。", "AbortError");
+  if (signal.aborted) throw new DOMException("Analysis aborted", "AbortError");
 
   const { Engine } = await import("@litert-lm/core");
   const engine = await Engine.create({
@@ -83,7 +83,7 @@ export async function structureWithGemmaInWorker(
   const cancel = () => conversation?.cancel();
   signal.addEventListener("abort", cancel, { once: true });
   try {
-    onProgress({ progress: null, message: "Gemmaで予定データを整えています" });
+    onProgress({ progress: null });
     conversation = await engine.createConversation({
       preface: { messages: [{ role: "system", content: SYSTEM_PROMPT }] },
     });
@@ -124,17 +124,17 @@ export function parseGemmaDocument(raw: string): TimetableDocument {
   } catch {
     const repaired = recoverJsonDocument(normalized);
     if (!repaired) {
-      throw new Error("Gemmaの応答をJSONとして読み取れませんでした。手入力で修正できます。");
+      throw new AppError("gemmaInvalidJson");
     }
     try {
       value = JSON.parse(repaired);
     } catch {
-      throw new Error("Gemmaの応答をJSONとして読み取れませんでした。手入力で修正できます。");
+      throw new AppError("gemmaInvalidJson");
     }
   }
   const parsed = timetableDocumentSchema.safeParse(normalizeGemmaValue(value));
   if (!parsed.success) {
-    throw new Error("Gemmaの応答に未確定の項目があります。手入力で修正してください。");
+    throw new AppError("gemmaInvalidData");
   }
   console.info("[My Timetable][Gemma] Structured result", parsed.data);
   return parsed.data;
@@ -257,16 +257,14 @@ async function loadModelStream(
   const { url, cacheName } = modelConfig.structuring;
   const cache = await caches.open(cacheName);
   let response = await cache.match(url);
-  const cached = Boolean(response);
   if (!response) {
     response = await fetch(url, { signal });
-    if (!response.ok || !response.body)
-      throw new Error("Gemmaモデルを取得できませんでした。ネットワークを確認してください。");
+    if (!response.ok || !response.body) throw new AppError("gemmaDownloadFailed");
     void cache.put(url, response.clone()).catch(() => {
       // Quota pressure must not prevent a one-time in-memory inference.
     });
   }
-  if (!response.body) throw new Error("Gemmaモデルのデータを読み込めませんでした。");
+  if (!response.body) throw new AppError("gemmaDataFailed");
 
   const total = Number(response.headers.get("content-length")) || 0;
   let loaded = 0;
@@ -276,7 +274,6 @@ async function loadModelStream(
         loaded += chunk.byteLength;
         onProgress({
           progress: total ? loaded / total : null,
-          message: cached ? "キャッシュ済みモデルを読み込んでいます" : "Gemmaモデルを取得しています",
         });
         controller.enqueue(chunk);
       },

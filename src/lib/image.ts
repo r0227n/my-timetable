@@ -27,9 +27,9 @@ export function fitImagePreview(
   return { width: source.width * scale, height: source.height * scale };
 }
 
-export function validateImageFile(file: File): string | null {
-  if (!acceptedImageTypes.has(file.type)) return "JPEG、PNG、WebP形式の画像を選択してください。";
-  if (file.size > maxFileSize) return "画像サイズは20MB以下にしてください。";
+export function validateImageFile(file: File): AppErrorCode | null {
+  if (!acceptedImageTypes.has(file.type)) return "imageInvalidType";
+  if (file.size > maxFileSize) return "imageTooLarge";
   return null;
 }
 
@@ -53,7 +53,7 @@ export async function renderAdjustedImage(
   canvas.width = Math.max(1, Math.round(rawWidth * scale));
   canvas.height = Math.max(1, Math.round(rawHeight * scale));
   const context = canvas.getContext("2d");
-  if (!context) throw new Error("画像を処理できませんでした。");
+  if (!context) throw new AppError("imageProcessFailed");
 
   context.filter = `brightness(${adjustments.brightness}%) contrast(${adjustments.contrast}%)`;
   context.translate(canvas.width / 2, canvas.height / 2);
@@ -62,7 +62,7 @@ export async function renderAdjustedImage(
 
   return await new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(
-      (blob) => (blob ? resolve(blob) : reject(new Error("画像を生成できませんでした。"))),
+      (blob) => (blob ? resolve(blob) : reject(new AppError("imageGenerateFailed"))),
       "image/png",
     );
   });
@@ -72,7 +72,8 @@ function loadImage(sourceUrl: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const image = new Image();
     image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error("画像を読み込めませんでした。"));
+    image.onerror = () => reject(new AppError("imageLoadFailed"));
     image.src = sourceUrl;
   });
 }
+import { AppError, type AppErrorCode } from "../domain/errors";

@@ -1,6 +1,8 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { buildTimelineSvg, type TimelineOptions } from "../domain/export";
 import type { ScheduleItem, TimetableDocument } from "../domain/timetable";
+import { useExportLabels } from "../i18n/use-export-labels";
 
 interface TimelineStepProps {
   document: TimetableDocument;
@@ -12,14 +14,19 @@ interface TimelineStepProps {
 }
 
 const sizePresets = {
-  phone: { label: "スマートフォン縦長", width: 1080, height: 1920 },
-  socialPortrait: { label: "SNS縦長", width: 1080, height: 1350 },
-  socialLandscape: { label: "SNS横長", width: 1600, height: 900 },
-  a4: { label: "A4縦", width: 1240, height: 1754 },
+  phone: { width: 1080, height: 1920 },
+  socialPortrait: { width: 1080, height: 1350 },
+  socialLandscape: { width: 1600, height: 900 },
+  a4: { width: 1240, height: 1754 },
 } as const;
 
 export function TimelineStep({ document, schedules, options, onChange, onBack, onNext }: TimelineStepProps) {
-  const svg = useMemo(() => buildTimelineSvg(document, schedules, options), [document, options, schedules]);
+  const { t } = useTranslation("timeline");
+  const labels = useExportLabels();
+  const svg = useMemo(
+    () => buildTimelineSvg(document, schedules, options, labels),
+    [document, labels, options, schedules],
+  );
   const previewUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 
   return (
@@ -27,37 +34,37 @@ export function TimelineStep({ document, schedules, options, onChange, onBack, o
       <div className="workspace-heading">
         <div>
           <span className="eyebrow">06 / TIMELINE</span>
-          <h1>タイムラインを整える</h1>
-          <p>選んだ予定だけを使って、保存用のレイアウトを調整します。</p>
+          <h1>{t("heading")}</h1>
+          <p>{t("description")}</p>
         </div>
       </div>
       <div className="timeline-layout">
-        <section className="timeline-preview panel" aria-label="タイムラインプレビュー">
-          <img src={previewUrl} alt="生成したタイムラインのプレビュー" />
+        <section className="timeline-preview panel" aria-label={t("previewLabel")}>
+          <img src={previewUrl} alt={t("previewAlt")} />
         </section>
         <aside className="timeline-controls panel">
           <label>
-            <span>タイトル</span>
+            <span>{t("title")}</span>
             <input
               value={options.title}
-              placeholder={document.event.name || "My Timetable"}
+              placeholder={document.event.name || labels.defaultTitle}
               onChange={(event) => onChange({ ...options, title: event.target.value })}
             />
           </label>
           <label>
-            <span>レイアウト</span>
+            <span>{t("layout")}</span>
             <select
               value={options.layout}
               onChange={(event) =>
                 onChange({ ...options, layout: event.target.value as TimelineOptions["layout"] })
               }
             >
-              <option value="vertical">縦型</option>
-              <option value="horizontal">横型</option>
+              <option value="vertical">{t("vertical")}</option>
+              <option value="horizontal">{t("horizontal")}</option>
             </select>
           </label>
           <label>
-            <span>出力サイズ</span>
+            <span>{t("outputSize")}</span>
             <select
               value={presetValue(options)}
               onChange={(event) => {
@@ -65,17 +72,17 @@ export function TimelineStep({ document, schedules, options, onChange, onBack, o
                 if (preset) onChange({ ...options, width: preset.width, height: preset.height });
               }}
             >
-              {Object.entries(sizePresets).map(([value, preset]) => (
+              {Object.entries(sizePresets).map(([value]) => (
                 <option value={value} key={value}>
-                  {preset.label}
+                  {t(`presets.${value as keyof typeof sizePresets}`)}
                 </option>
               ))}
-              <option value="custom">カスタム</option>
+              <option value="custom">{t("presets.custom")}</option>
             </select>
           </label>
           <div className="size-inputs">
             <label>
-              <span>幅</span>
+              <span>{t("width")}</span>
               <input
                 type="number"
                 min={320}
@@ -84,7 +91,7 @@ export function TimelineStep({ document, schedules, options, onChange, onBack, o
               />
             </label>
             <label>
-              <span>高さ</span>
+              <span>{t("height")}</span>
               <input
                 type="number"
                 min={320}
@@ -95,7 +102,7 @@ export function TimelineStep({ document, schedules, options, onChange, onBack, o
           </div>
           <div className="size-inputs">
             <label>
-              <span>背景色</span>
+              <span>{t("background")}</span>
               <input
                 type="color"
                 value={options.background}
@@ -103,7 +110,7 @@ export function TimelineStep({ document, schedules, options, onChange, onBack, o
               />
             </label>
             <label>
-              <span>アクセント色</span>
+              <span>{t("accent")}</span>
               <input
                 type="color"
                 value={options.accent}
@@ -112,14 +119,14 @@ export function TimelineStep({ document, schedules, options, onChange, onBack, o
             </label>
           </div>
           <fieldset className="display-options">
-            <legend>表示項目</legend>
+            <legend>{t("displayItems")}</legend>
             {(
               [
-                ["showDate", "日付"],
-                ["showVenue", "会場"],
-                ["showType", "種別"],
-                ["showStage", "ステージ"],
-                ["showBooth", "ブース"],
+                ["showDate", "showDate"],
+                ["showVenue", "showVenue"],
+                ["showType", "showType"],
+                ["showStage", "showStage"],
+                ["showBooth", "showBooth"],
               ] as const
             ).map(([key, label]) => (
               <label key={key}>
@@ -128,7 +135,7 @@ export function TimelineStep({ document, schedules, options, onChange, onBack, o
                   checked={options[key]}
                   onChange={(event) => onChange({ ...options, [key]: event.target.checked })}
                 />
-                <span>{label}</span>
+                <span>{t(label)}</span>
               </label>
             ))}
           </fieldset>
@@ -136,10 +143,10 @@ export function TimelineStep({ document, schedules, options, onChange, onBack, o
       </div>
       <div className="footer-actions">
         <button className="ghost-button" type="button" onClick={onBack}>
-          選択へ戻る
+          {t("back")}
         </button>
         <button className="primary-button" type="button" onClick={onNext}>
-          出力へ進む
+          {t("next")}
         </button>
       </div>
     </main>

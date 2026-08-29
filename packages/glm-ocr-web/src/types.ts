@@ -1,4 +1,12 @@
 export type OcrEngineKind = "glm-ocr";
+export type OcrErrorCode = "webGpuRequired" | "invalidInput" | "invalidOutput";
+
+export class OcrError extends Error {
+  constructor(public readonly code: OcrErrorCode) {
+    super(code);
+    this.name = "OcrError";
+  }
+}
 
 export interface OcrProgress {
   stage: "model" | "recognition";
