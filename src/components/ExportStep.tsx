@@ -19,6 +19,7 @@ import { localizeError } from "../i18n/errors";
 import { useExportLabels } from "../i18n/use-export-labels";
 import { formatNumber } from "../i18n/format";
 import { currentLanguage } from "../i18n/i18n";
+import type { AppErrorCode } from "../domain/errors";
 
 interface ExportStepProps {
   document: TimetableDocument;
@@ -27,12 +28,16 @@ interface ExportStepProps {
   onBack: () => void;
 }
 
+type ExportMessage =
+  | { type: "translation"; key: "icsSaved" | "registrationComplete" | "pngSaved" }
+  | { type: "error"; error: unknown; fallback: AppErrorCode };
+
 export function ExportStep({ document, schedules, options, onBack }: ExportStepProps) {
   const { t } = useTranslation("export");
   const { t: tCommon } = useTranslation("common");
   const labels = useExportLabels();
   const language = currentLanguage();
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<ExportMessage | null>(null);
   const [googleState, setGoogleState] = useState<"idle" | "confirm" | "working">("idle");
   const [googleResults, setGoogleResults] = useState<CalendarRegistrationResult[]>([]);
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
@@ -50,9 +55,9 @@ export function ExportStep({ document, schedules, options, onBack }: ExportStepP
     try {
       const ics = buildIcsCalendar(document, schedules, labels.scheduleTypes);
       downloadBlob(new Blob([ics], { type: "text/calendar;charset=utf-8" }), `${fileName}.ics`);
-      setMessage(t("icsSaved"));
+      setMessage({ type: "translation", key: "icsSaved" });
     } catch (error) {
-      setMessage(localizeError(error, "icsSaveFailed"));
+      setMessage({ type: "error", error, fallback: "icsSaveFailed" });
     }
   };
   const registerGoogleCalendar = async (
@@ -75,9 +80,9 @@ export function ExportStep({ document, schedules, options, onBack }: ExportStepP
         results.forEach((result) => merged.set(result.scheduleId, result));
         return [...merged.values()];
       });
-      setMessage(t("registrationComplete"));
+      setMessage({ type: "translation", key: "registrationComplete" });
     } catch (error) {
-      setMessage(localizeError(error, "googleRegistrationFailed"));
+      setMessage({ type: "error", error, fallback: "googleRegistrationFailed" });
     } finally {
       setGoogleState("idle");
     }
@@ -125,9 +130,11 @@ export function ExportStep({ document, schedules, options, onBack }: ExportStepP
               void svgToPngBlob(svg, options.width, options.height)
                 .then((blob) => {
                   downloadBlob(blob, `${fileName}.png`);
-                  setMessage(t("pngSaved"));
+                  setMessage({ type: "translation", key: "pngSaved" });
                 })
-                .catch((error: unknown) => setMessage(localizeError(error, "pngSaveFailed")))
+                .catch((error: unknown) =>
+                  setMessage({ type: "error", error, fallback: "pngSaveFailed" }),
+                )
             }
           >
             {t("savePng")}
@@ -217,7 +224,11 @@ export function ExportStep({ document, schedules, options, onBack }: ExportStepP
           ) : null}
         </article>
       </section>
-      {message ? <output className="export-message">{message}</output> : null}
+      {message ? (
+        <output className="export-message">
+          {message.type === "translation" ? t(message.key) : localizeError(message.error, message.fallback)}
+        </output>
+      ) : null}
       <div className="footer-actions">
         <button className="ghost-button" type="button" onClick={onBack}>
           {t("back")}

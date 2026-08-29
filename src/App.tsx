@@ -19,7 +19,7 @@ import { localizeError } from "./i18n/errors";
 type AnalysisState = {
   stage: "preparing" | "model" | "ocr" | "gemma" | "error";
   progress: number | null;
-  error: string | null;
+  error: unknown | null;
 };
 
 const initialAnalysis: AnalysisState = {
@@ -97,7 +97,7 @@ export default function App() {
       setAnalysis((current) => ({
         ...current,
         stage: "error",
-        error: localizeError(error, "analysisFailed"),
+        error,
       }));
     } finally {
       if (controller.current === nextController) controller.current = null;
@@ -155,7 +155,9 @@ export default function App() {
       ) : null}
       {step === 2 ? (
         <AnalysisStep
-          {...analysis}
+          stage={analysis.stage}
+          progress={analysis.progress}
+          error={analysis.error ? localizeError(analysis.error, "analysisFailed") : null}
           onCancel={() => controller.current?.abort()}
           onManual={manual}
           onRetry={() => void startAnalysis()}
