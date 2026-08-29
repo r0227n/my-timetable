@@ -14,6 +14,7 @@ export const namespaces = [
   "export",
 ] as const;
 export type TranslationNamespace = (typeof namespaces)[number];
+export const initialNamespaces = ["common", "upload"] as const satisfies readonly TranslationNamespace[];
 
 export function normalizeLanguage(value: string | null | undefined): SupportedLanguage | null {
   if (!value) return null;

@@ -11,6 +11,7 @@ describe("Phase 1 manual flow", () => {
     render(<App />);
     expect(screen.getByText("画像は端末の外へ送信されません")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "画像を使わず手入力ではじめる" }));
+    await screen.findByLabelText("出演者名");
 
     await user.type(screen.getByPlaceholderText("イベント名"), "テストフェス");
     await user.type(screen.getByLabelText("出演者名"), "Example Artist");
@@ -21,13 +22,14 @@ describe("Phase 1 manual flow", () => {
     await user.click(screen.getByRole("button", { name: "予定を選ぶ" }));
 
     expect(screen.getAllByText("Example Artist").length).toBeGreaterThan(0);
-    expect(screen.getByText("時間の重なりはありません")).toBeInTheDocument();
+    expect(await screen.findByText("時間の重なりはありません")).toBeInTheDocument();
   });
 
   it("keeps selections that are hidden by a filter when selecting every visible schedule", async () => {
     const user = userEvent.setup();
     render(<App />);
     await user.click(screen.getByRole("button", { name: "画像を使わず手入力ではじめる" }));
+    await screen.findByLabelText("出演者名");
     await user.type(screen.getByLabelText(/開催日/), "2026-08-27");
     await user.type(screen.getByLabelText("出演者名"), "Artist A");
     await user.click(screen.getByRole("button", { name: "行を追加" }));
@@ -47,6 +49,7 @@ describe("Phase 1 manual flow", () => {
     const user = userEvent.setup();
     render(<App />);
     await user.click(screen.getByRole("button", { name: "画像を使わず手入力ではじめる" }));
+    await screen.findByLabelText("出演者名");
     await user.type(screen.getByLabelText("出演者名"), "Artist A");
 
     const next = screen.getByRole("button", { name: "予定を選ぶ" });
@@ -59,6 +62,7 @@ describe("Phase 1 manual flow", () => {
     const user = userEvent.setup();
     render(<App />);
     await user.click(screen.getByRole("button", { name: "画像を使わず手入力ではじめる" }));
+    await screen.findByLabelText("出演者名");
     await user.type(screen.getByLabelText("出演者名"), "Artist A");
     await user.type(screen.getByLabelText("開始時刻"), "11:00");
     await user.type(screen.getByLabelText("終了時刻"), "10:00");
@@ -72,6 +76,7 @@ describe("Phase 1 manual flow", () => {
     const user = userEvent.setup();
     render(<App />);
     await user.click(screen.getByRole("button", { name: "画像を使わず手入力ではじめる" }));
+    await screen.findByLabelText("出演者名");
 
     expect(screen.getByLabelText("開場時刻")).toBeInTheDocument();
     expect(screen.getByLabelText("開演時刻")).toBeInTheDocument();
@@ -84,6 +89,7 @@ describe("Phase 1 manual flow", () => {
     const user = userEvent.setup();
     render(<App />);
     await user.click(screen.getByRole("button", { name: "画像を使わず手入力ではじめる" }));
+    await screen.findByLabelText("出演者名");
     await user.type(screen.getByLabelText("出演者名"), "Artist A");
 
     await user.click(screen.getByRole("button", { name: "表示言語: 日本語" }));
@@ -101,6 +107,7 @@ describe("Phase 1 manual flow", () => {
     const user = userEvent.setup();
     render(<App />);
     await user.click(screen.getByRole("button", { name: "画像を使わず手入力ではじめる" }));
+    await screen.findByLabelText("出演者名");
     await user.type(screen.getByLabelText(/開催日/), "2026-08-27");
     await user.type(screen.getByLabelText("出演者名"), "Artist A");
     await user.type(screen.getByLabelText("開始時刻"), "10:00");
@@ -108,9 +115,9 @@ describe("Phase 1 manual flow", () => {
     await user.click(screen.getByRole("button", { name: "予定を選ぶ" }));
     await user.click(screen.getByRole("button", { name: "タイムラインを作る" }));
 
-    expect(screen.getByRole("heading", { name: "タイムラインを整える" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "タイムラインを整える" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "出力へ進む" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("low信頼度の未確認予定が1件");
+    expect(await screen.findByRole("alert")).toHaveTextContent("low信頼度の未確認予定が1件");
     expect(screen.getByRole("button", { name: "SVGを保存" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "PNGを保存" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "ICSを保存" })).toBeInTheDocument();

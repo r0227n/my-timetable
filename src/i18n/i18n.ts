@@ -3,6 +3,7 @@ import resourcesToBackend from "i18next-resources-to-backend";
 import { initReactI18next } from "react-i18next";
 import {
   defaultLanguage,
+  initialNamespaces,
   languageStorageKey,
   namespaces,
   normalizeLanguage,
@@ -72,7 +73,7 @@ export function initializeI18n(): Promise<typeof i18n> {
       }),
       fallbackLng: defaultLanguage,
       supportedLngs: supportedLanguages,
-      ns: namespaces,
+      ns: initialNamespaces,
       defaultNS: "common",
       fallbackNS: "common",
       interpolation: { escapeValue: false },
