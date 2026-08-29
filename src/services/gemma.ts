@@ -14,6 +14,11 @@ export interface GemmaProgress {
   message: string;
 }
 
+type GemmaWorkerResponse =
+  | { type: "progress"; progress: GemmaProgress }
+  | { type: "result"; document: TimetableDocument }
+  | { type: "error"; name: string; message: string };
+
 const promptExample = {
   ...createEmptyDocument(),
   schedules: [createBlankSchedule({ id: "item-1" })],
@@ -27,6 +32,39 @@ Do not create a schedule from a time-axis label alone. Omit a schedule when no a
 Copy the region coordinates that support each schedule into sourceRegions.`;
 
 export async function structureWithGemma(
+  ocrResult: OcrResult,
+  onProgress: (progress: GemmaProgress) => void,
+  signal: AbortSignal,
+): Promise<TimetableDocument> {
+  if (signal.aborted) throw new DOMException("解析を中止しました。", "AbortError");
+  const worker = new Worker(new URL("./gemma-worker.ts", import.meta.url), { type: "module" });
+  return await new Promise<TimetableDocument>((resolve, reject) => {
+    const finish = () => {
+      signal.removeEventListener("abort", cancel);
+      worker.terminate();
+    };
+    const cancel = () => worker.postMessage({ type: "cancel" });
+    signal.addEventListener("abort", cancel, { once: true });
+    worker.onmessage = (event: MessageEvent<GemmaWorkerResponse>) => {
+      const response = event.data;
+      if (response.type === "progress") {
+        onProgress(response.progress);
+        return;
+      }
+      finish();
+      if (response.type === "result") resolve(response.document);
+      else if (response.name === "AbortError") reject(new DOMException(response.message, "AbortError"));
+      else reject(new Error(response.message));
+    };
+    worker.onerror = (event) => {
+      finish();
+      reject(new Error(event.message || "Gemma Workerでエラーが発生しました。"));
+    };
+    worker.postMessage({ type: "structure", ocrResult });
+  });
+}
+
+export async function structureWithGemmaInWorker(
   ocrResult: OcrResult,
   onProgress: (progress: GemmaProgress) => void,
   signal: AbortSignal,

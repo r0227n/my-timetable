@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { GLM_EXTERNAL_DATA, GLM_MODEL_ID, GLM_MODEL_REVISION, OCR_ENGINES } from "./config";
+import { GlmOcrEngine } from "./glm-engine";
 import { createOcrEngine } from "./index";
 import { createOcrRegions } from "./glm-engine";
 import type { OcrProgress } from "./types";
@@ -31,7 +32,7 @@ describe("GLM-OCR engine configuration", () => {
       env: { fetch: vi.fn<(input: string | URL, init?: unknown) => Promise<unknown>>() },
     }));
     const controller = new AbortController();
-    const recognition = createOcrEngine().recognize(
+    const recognition = new GlmOcrEngine().recognize(
       new Blob(),
       vi.fn<(progress: OcrProgress) => void>(),
       controller.signal,
@@ -77,7 +78,7 @@ describe("GLM-OCR engine configuration", () => {
       env: { fetch: vi.fn<(input: string | URL, init?: unknown) => Promise<unknown>>() },
     }));
 
-    const result = await createOcrEngine().recognize(
+    const result = await new GlmOcrEngine().recognize(
       new Blob(),
       vi.fn<(progress: OcrProgress) => void>(),
       new AbortController().signal,
