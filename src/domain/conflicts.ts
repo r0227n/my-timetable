@@ -14,7 +14,14 @@ function minutes(value: string | null): number | null {
 
 export function detectConflicts(items: ScheduleItem[], bufferMinutes = 0): ScheduleConflict[] {
   const timed = items
-    .map((item) => ({ item, start: minutes(item.startTime), end: minutes(item.endTime) }))
+    .map((item) => {
+      const end = minutes(item.endTime);
+      return {
+        item,
+        start: minutes(item.startTime),
+        end: end === null ? null : end + (item.endsNextDay ? 1440 : 0),
+      };
+    })
     .filter(
       (entry): entry is typeof entry & { start: number; end: number } =>
         entry.start !== null && entry.end !== null && entry.end > entry.start,
@@ -42,7 +49,7 @@ export function findInvalidTimeRangeIds(items: ScheduleItem[]): Set<string> {
       .filter((item) => {
         const start = minutes(item.startTime);
         const end = minutes(item.endTime);
-        return start !== null && end !== null && end <= start;
+        return start !== null && end !== null && !item.endsNextDay && end <= start;
       })
       .map((item) => item.id),
   );
@@ -52,7 +59,7 @@ export function findDuplicateIds(items: ScheduleItem[]): Set<string> {
   const seen = new Map<string, string>();
   const duplicates = new Set<string>();
   for (const item of items) {
-    const key = `${item.artist.trim().toLocaleLowerCase()}|${item.type}|${item.startTime ?? ""}|${item.endTime ?? ""}`;
+    const key = `${item.artist.trim().toLocaleLowerCase()}|${item.type}|${item.startTime ?? ""}|${item.endTime ?? ""}|${item.endsNextDay}`;
     if (!item.artist.trim()) continue;
     const first = seen.get(key);
     if (first) {

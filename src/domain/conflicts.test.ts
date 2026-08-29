@@ -22,6 +22,17 @@ describe("detectConflicts", () => {
 
     expect(findInvalidTimeRangeIds([reversed, equal, valid])).toEqual(new Set(["reversed", "equal"]));
   });
+
+  it("accepts a reversed clock range when the user marks it as ending next day", () => {
+    const overnight = createBlankSchedule({
+      id: "overnight",
+      startTime: "23:30",
+      endTime: "00:30",
+      endsNextDay: true,
+    });
+
+    expect(findInvalidTimeRangeIds([overnight])).toEqual(new Set());
+  });
 });
 
 describe("findDuplicateIds", () => {

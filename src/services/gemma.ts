@@ -197,6 +197,7 @@ function normalizeSchedule(value: unknown, index: number): Record<string, unknow
     type: enumOr(schedule.type, scheduleTypes, "other"),
     startTime: validTimeOrNull(schedule.startTime),
     endTime: validTimeOrNull(schedule.endTime),
+    endsNextDay: schedule.endsNextDay === true,
     relativeTimeLabel: nullableString(schedule.relativeTimeLabel),
     stage: nullableString(schedule.stage),
     booth: nullableString(schedule.booth),

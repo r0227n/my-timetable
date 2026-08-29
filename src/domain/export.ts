@@ -52,10 +52,18 @@ export function buildTimelineSvg(
 export function buildIcsCalendar(document: TimetableDocument, schedules: ScheduleItem[]): string {
   if (!document.event.date) throw new Error("ICS出力には開催日が必要です。");
   const events = schedules.flatMap((schedule) => {
-    if (!schedule.startTime || !schedule.endTime || schedule.endTime <= schedule.startTime) return [];
+    if (
+      !schedule.startTime ||
+      !schedule.endTime ||
+      (!schedule.endsNextDay && schedule.endTime <= schedule.startTime)
+    )
+      return [];
     const date = document.event.date!.replaceAll("-", "");
+    const endDate = (
+      schedule.endsNextDay ? addDays(document.event.date!, 1) : document.event.date!
+    ).replaceAll("-", "");
     const start = `${date}T${schedule.startTime.replace(":", "")}00`;
-    const end = `${date}T${schedule.endTime.replace(":", "")}00`;
+    const end = `${endDate}T${schedule.endTime.replace(":", "")}00`;
     const location = schedule.stage ?? schedule.booth ?? document.event.venue ?? "";
     const description = [document.event.name, scheduleTypeLabels[schedule.type], ...document.event.notes]
       .filter(Boolean)
@@ -105,7 +113,8 @@ function createTimelineLayout(schedules: ScheduleItem[]): TimelineLayout {
       const start = timeToMinutes(schedule.startTime);
       if (start === null) return [];
       const parsedEnd = timeToMinutes(schedule.endTime);
-      return [{ schedule, start, end: parsedEnd !== null && parsedEnd > start ? parsedEnd : start + 30 }];
+      const end = parsedEnd === null ? null : parsedEnd + (schedule.endsNextDay ? 1440 : 0);
+      return [{ schedule, start, end: end !== null && end > start ? end : start + 30 }];
     })
     .toSorted((first, second) => first.start - second.start || first.end - second.end);
   const laneEnds: number[] = [];
@@ -263,6 +272,12 @@ function timeToMinutes(value: string | null): number | null {
   if (!value) return null;
   const [hours, minutes] = value.split(":").map(Number);
   return hours * 60 + minutes;
+}
+
+function addDays(date: string, days: number): string {
+  const value = new Date(`${date}T00:00:00Z`);
+  value.setUTCDate(value.getUTCDate() + days);
+  return value.toISOString().slice(0, 10);
 }
 
 function scheduleDetails(schedule: ScheduleItem, options: TimelineOptions): string {

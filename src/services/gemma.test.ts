@@ -19,6 +19,7 @@ const valid = {
       type: "live",
       startTime: "10:00",
       endTime: "10:30",
+      endsNextDay: false,
       relativeTimeLabel: null,
       stage: null,
       booth: null,
