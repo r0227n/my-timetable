@@ -18,8 +18,13 @@ export function UploadStep({ webGpu, onFile, onManual }: UploadStepProps) {
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState<AppErrorCode | null>(null);
 
-  const acceptFile = (file?: File) => {
-    if (!file) return;
+  const acceptFiles = (files: readonly File[]) => {
+    if (files.length === 0) return;
+    if (files.length > 1) {
+      setError("imageMultipleFiles");
+      return;
+    }
+    const [file] = files;
     const validation = validateImageFile(file);
     setError(validation);
     if (!validation) onFile(file);
@@ -64,11 +69,24 @@ export function UploadStep({ webGpu, onFile, onManual }: UploadStepProps) {
           onDrop={(event) => {
             event.preventDefault();
             setDragging(false);
-            acceptFile(event.dataTransfer.files[0]);
+            acceptFiles(Array.from(event.dataTransfer.files));
+          }}
+          onPaste={(event) => {
+            if (event.currentTarget !== document.activeElement) return;
+            const images = Array.from(event.clipboardData.items)
+              .filter((item) => item.kind === "file" && item.type.startsWith("image/"))
+              .map((item) => item.getAsFile())
+              .filter((file): file is File => file !== null);
+            if (images.length === 0) return;
+            event.preventDefault();
+            acceptFiles(images);
           }}
           onClick={() => inputRef.current?.click()}
           onKeyDown={(event) => {
-            if (event.key === "Enter" || event.key === " ") inputRef.current?.click();
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              inputRef.current?.click();
+            }
           }}
         >
           <span className="upload-icon">
@@ -82,8 +100,12 @@ export function UploadStep({ webGpu, onFile, onManual }: UploadStepProps) {
           ref={inputRef}
           type="file"
           accept="image/jpeg,image/png,image/webp"
+          multiple
           hidden
-          onChange={(event) => acceptFile(event.target.files?.[0])}
+          onChange={(event) => {
+            acceptFiles(Array.from(event.target.files ?? []));
+            event.target.value = "";
+          }}
         />
         {error ? (
           <p className="form-error" role="alert">

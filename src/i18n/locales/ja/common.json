@@ -37,6 +37,7 @@
     "ocrInvalidOutput": "GLM-OCRの出力形式が不正です。画像を調整して再試行してください。",
     "imageInvalidType": "JPEG、PNG、WebP形式の画像を選択してください。",
     "imageTooLarge": "画像サイズは20MB以下にしてください。",
+    "imageMultipleFiles": "画像は1枚だけ選択してください。",
     "imageProcessFailed": "画像を処理できませんでした。",
     "imageGenerateFailed": "画像を生成できませんでした。",
     "imageLoadFailed": "画像を読み込めませんでした。",

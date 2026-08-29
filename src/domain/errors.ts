@@ -6,6 +6,7 @@ export const appErrorCodes = [
   "ocrInvalidOutput",
   "imageInvalidType",
   "imageTooLarge",
+  "imageMultipleFiles",
   "imageProcessFailed",
   "imageGenerateFailed",
   "imageLoadFailed",
