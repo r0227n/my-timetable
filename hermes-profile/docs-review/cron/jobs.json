@@ -33,8 +33,7 @@
       "failure_streak": 0,
       "deliver": "local",
       "origin": null,
-      "enabled_toolsets": null,
-      "workdir": "/Users/r0227n/Dev/my-timetable"
+      "enabled_toolsets": null
     }
   ],
   "updated_at": "2026-08-29T00:00:00+09:00"
