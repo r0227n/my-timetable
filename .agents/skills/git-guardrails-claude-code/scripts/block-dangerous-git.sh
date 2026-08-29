@@ -5,6 +5,11 @@ COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command')
 
 read -r -a TOKENS <<< "$COMMAND"
 
+for ((token_index = 0; token_index < ${#TOKENS[@]}; token_index += 1)); do
+  TOKENS[token_index]="${TOKENS[token_index]//\'/}"
+  TOKENS[token_index]="${TOKENS[token_index]//\"/}"
+done
+
 block() {
   echo "BLOCKED: '$COMMAND' contains dangerous git operation '$1'. The user has prevented you from doing this." >&2
   exit 2
