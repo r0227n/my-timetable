@@ -1,6 +1,6 @@
 import { GLM_EXTERNAL_DATA, GLM_MODEL_ID, GLM_MODEL_REVISION } from "./config";
 import { createModelProgressReporter } from "./model-progress";
-import type { OcrEngine, OcrProgress, OcrResult } from "./types";
+import { OcrError, type OcrEngine, type OcrProgress, type OcrResult } from "./types";
 
 const LOG_PREFIX = "[My Timetable][GLM-OCR]";
 
@@ -15,7 +15,7 @@ export class GlmOcrEngine implements OcrEngine {
   ): Promise<OcrResult> {
     onProgress({ stage: "model", progress: null, message: "GLM-OCR実行環境を確認しています" });
     if (typeof navigator === "undefined" || !navigator.gpu) {
-      throw new Error("GLM-OCRにはWebGPU対応の最新版ChromeまたはEdgeが必要です。");
+      throw new OcrError("webGpuRequired");
     }
     throwIfAborted(signal);
 
@@ -102,9 +102,9 @@ export class GlmOcrEngine implements OcrEngine {
       throwIfAborted(signal);
 
       const promptLength = inputs.input_ids.dims.at(-1);
-      if (promptLength === undefined) throw new Error("GLM-OCRの入力を生成できませんでした。");
+      if (promptLength === undefined) throw new OcrError("invalidInput");
       if (!("slice" in outputs) || typeof outputs.slice !== "function") {
-        throw new Error("GLM-OCRの出力形式が不正です。");
+        throw new OcrError("invalidOutput");
       }
       const decoded = processor.batch_decode(outputs.slice(null, [promptLength, null]), {
         skip_special_tokens: true,

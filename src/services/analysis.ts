@@ -1,5 +1,5 @@
 import type { TimetableDocument } from "../domain/timetable";
-import { createOcrEngine, type OcrProgress } from "@my-timetable/glm-ocr-web";
+import { createOcrEngine, OcrError, type OcrProgress } from "@my-timetable/glm-ocr-web";
 import type { GemmaProgress } from "./gemma";
 import { AppError } from "../domain/errors";
 
@@ -14,6 +14,16 @@ export async function analyzeTimetable(
   let ocrResult;
   try {
     ocrResult = await engine.recognize(image, (progress) => onUpdate({ step: "ocr", ...progress }), signal);
+  } catch (error) {
+    if (error instanceof OcrError) {
+      const codes = {
+        webGpuRequired: "ocrWebGpuRequired",
+        invalidInput: "ocrInvalidInput",
+        invalidOutput: "ocrInvalidOutput",
+      } as const;
+      throw new AppError(codes[error.code]);
+    }
+    throw error;
   } finally {
     await engine.dispose();
   }

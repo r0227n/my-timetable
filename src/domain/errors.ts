@@ -1,6 +1,9 @@
 export const appErrorCodes = [
   "analysisFailed",
   "analysisNoText",
+  "ocrWebGpuRequired",
+  "ocrInvalidInput",
+  "ocrInvalidOutput",
   "imageInvalidType",
   "imageTooLarge",
   "imageProcessFailed",

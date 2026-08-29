@@ -32,6 +32,9 @@
   "errors": {
     "analysisFailed": "Analysis failed.",
     "analysisNoText": "No text could be read from the image. Adjust the image or continue with manual entry.",
+    "ocrWebGpuRequired": "GLM-OCR requires the latest WebGPU-compatible Chrome or Edge.",
+    "ocrInvalidInput": "GLM-OCR could not prepare the image input. Adjust the image and try again.",
+    "ocrInvalidOutput": "GLM-OCR returned an invalid output format. Adjust the image and try again.",
     "imageInvalidType": "Select a JPEG, PNG, or WebP image.",
     "imageTooLarge": "The image must be 20 MB or smaller.",
     "imageProcessFailed": "The image could not be processed.",
