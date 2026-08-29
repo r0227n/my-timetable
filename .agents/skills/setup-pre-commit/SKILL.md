@@ -16,7 +16,7 @@ description: Set up Husky pre-commit hooks with lint-staged (Prettier), type che
 
 ### 1. Detect package manager
 
-Check for `package-lock.json` (npm), `pnpm-lock.yaml` (pnpm), `yarn.lock` (yarn), `bun.lockb` (bun). Use whichever is present. Default to npm if unclear.
+Treat the `packageManager` field in `package.json` as the SSOT when present. Otherwise check for `bun.lock` or `bun.lockb` (bun), `pnpm-lock.yaml` (pnpm), `yarn.lock` (yarn), and `package-lock.json` (npm). If metadata conflicts, stop instead of creating another package manager's lockfile. Default to npm only when neither metadata nor a lockfile identifies the package manager.
 
 ### 2. Install dependencies
 

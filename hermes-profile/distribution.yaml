@@ -1,7 +1,0 @@
-name: my-timetable
-version: 0.1.0
-description: docs/SPEC.md を SSOT として my-timetable Web アプリを実装・保守する Hermes profile
-distribution_owned:
-  - distribution.yaml
-  - config.yaml
-  - SOUL.md

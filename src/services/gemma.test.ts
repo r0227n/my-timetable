@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { parseGemmaDocument } from "./gemma";
+import { createGemmaUserPrompt, parseGemmaDocument } from "./gemma";
 
 const valid = {
   schemaVersion: 1,
@@ -19,6 +19,7 @@ const valid = {
       type: "live",
       startTime: "10:00",
       endTime: "10:30",
+      endsNextDay: false,
       relativeTimeLabel: null,
       stage: null,
       booth: null,
@@ -80,5 +81,19 @@ describe("parseGemmaDocument", () => {
 
     expect(result).toEqual(valid);
     expect(consoleInfo).toHaveBeenLastCalledWith("[My Timetable][Gemma] Structured result", result);
+  });
+});
+
+describe("createGemmaUserPrompt", () => {
+  it("preserves OCR content beyond the previous truncation boundary", () => {
+    const tail = "END-OF-OCR";
+    const prompt = createGemmaUserPrompt({
+      engine: "glm-ocr",
+      text: `${"x".repeat(25_000)}${tail}`,
+      regions: [],
+    });
+
+    expect(prompt).toContain(tail);
+    expect(prompt.length).toBeGreaterThan(25_000);
   });
 });

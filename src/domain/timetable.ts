@@ -18,6 +18,7 @@ export const scheduleItemSchema = z.object({
     .string()
     .regex(/^([01]\d|2[0-3]):[0-5]\d$/)
     .nullable(),
+  endsNextDay: z.boolean(),
   relativeTimeLabel: z.string().nullable(),
   stage: z.string().nullable(),
   booth: z.string().nullable(),
@@ -70,6 +71,7 @@ export function createBlankSchedule(overrides: Partial<ScheduleItem> = {}): Sche
     type: "live",
     startTime: null,
     endTime: null,
+    endsNextDay: false,
     relativeTimeLabel: null,
     stage: null,
     booth: null,

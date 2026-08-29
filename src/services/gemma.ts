@@ -14,6 +14,11 @@ export interface GemmaProgress {
   message: string;
 }
 
+type GemmaWorkerResponse =
+  | { type: "progress"; progress: GemmaProgress }
+  | { type: "result"; document: TimetableDocument }
+  | { type: "error"; name: string; message: string };
+
 const promptExample = {
   ...createEmptyDocument(),
   schedules: [createBlankSchedule({ id: "item-1" })],
@@ -27,6 +32,39 @@ Do not create a schedule from a time-axis label alone. Omit a schedule when no a
 Copy the region coordinates that support each schedule into sourceRegions.`;
 
 export async function structureWithGemma(
+  ocrResult: OcrResult,
+  onProgress: (progress: GemmaProgress) => void,
+  signal: AbortSignal,
+): Promise<TimetableDocument> {
+  if (signal.aborted) throw new DOMException("解析を中止しました。", "AbortError");
+  const worker = new Worker(new URL("./gemma-worker.ts", import.meta.url), { type: "module" });
+  return await new Promise<TimetableDocument>((resolve, reject) => {
+    const finish = () => {
+      signal.removeEventListener("abort", cancel);
+      worker.terminate();
+    };
+    const cancel = () => worker.postMessage({ type: "cancel" });
+    signal.addEventListener("abort", cancel, { once: true });
+    worker.onmessage = (event: MessageEvent<GemmaWorkerResponse>) => {
+      const response = event.data;
+      if (response.type === "progress") {
+        onProgress(response.progress);
+        return;
+      }
+      finish();
+      if (response.type === "result") resolve(response.document);
+      else if (response.name === "AbortError") reject(new DOMException(response.message, "AbortError"));
+      else reject(new Error(response.message));
+    };
+    worker.onerror = (event) => {
+      finish();
+      reject(new Error(event.message || "Gemma Workerでエラーが発生しました。"));
+    };
+    worker.postMessage({ type: "structure", ocrResult });
+  });
+}
+
+export async function structureWithGemmaInWorker(
   ocrResult: OcrResult,
   onProgress: (progress: GemmaProgress) => void,
   signal: AbortSignal,
@@ -49,10 +87,7 @@ export async function structureWithGemma(
     conversation = await engine.createConversation({
       preface: { messages: [{ role: "system", content: SYSTEM_PROMPT }] },
     });
-    const ocrContext = JSON.stringify({ text: ocrResult.text, regions: ocrResult.regions });
-    const response = await conversation.sendMessage(
-      `次のOCR結果だけを根拠にJSONへ変換してください。\n\n${ocrContext.slice(0, 24000)}`,
-    );
+    const response = await conversation.sendMessage(createGemmaUserPrompt(ocrResult));
     const content = response.content;
     const text =
       typeof content === "string"
@@ -70,6 +105,11 @@ export async function structureWithGemma(
       await engine.delete();
     }
   }
+}
+
+export function createGemmaUserPrompt(ocrResult: OcrResult): string {
+  const ocrContext = JSON.stringify({ text: ocrResult.text, regions: ocrResult.regions });
+  return `次のOCR結果だけを根拠にJSONへ変換してください。\n\n${ocrContext}`;
 }
 
 export function parseGemmaDocument(raw: string): TimetableDocument {
@@ -159,6 +199,7 @@ function normalizeSchedule(value: unknown, index: number): Record<string, unknow
     type: enumOr(schedule.type, scheduleTypes, "other"),
     startTime: validTimeOrNull(schedule.startTime),
     endTime: validTimeOrNull(schedule.endTime),
+    endsNextDay: schedule.endsNextDay === true,
     relativeTimeLabel: nullableString(schedule.relativeTimeLabel),
     stage: nullableString(schedule.stage),
     booth: nullableString(schedule.booth),

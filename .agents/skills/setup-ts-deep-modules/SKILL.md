@@ -38,7 +38,7 @@ Layering (which packages may depend on which) is a *different* concern and is le
 
 ### 1. Detect the environment
 
-- **Package manager**: `pnpm-lock.yaml` → pnpm, `yarn.lock` → yarn, `bun.lockb` → bun, else npm. Use it for every command below (`pnpm`/`yarn`/`npm run`/`bunx`).
+- **Package manager**: use the `packageManager` field in `package.json` when present. Otherwise detect `bun.lock` or `bun.lockb` → bun, `pnpm-lock.yaml` → pnpm, `yarn.lock` → yarn, `package-lock.json` → npm. Stop on conflicting metadata instead of creating another lockfile; default to npm only when no metadata exists. Use the detected package manager for every command below (`pnpm`/`yarn`/`npm run`/`bunx`).
 - **Packages root**: if `src/` exists use `src/packages`, else `packages`. Confirm the choice with the user if the repo already has a different obvious convention.
 - **Existing config**: check for a `.dependency-cruiser.*` file. If one exists, do **not** overwrite it: merge the four rules and the options in, and tell the user what you added.
 

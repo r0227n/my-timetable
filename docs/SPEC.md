@@ -279,6 +279,7 @@ interface ScheduleItem {
   type: ScheduleType;
   startTime: string | null;
   endTime: string | null;
+  endsNextDay: boolean;              // 終了時刻をイベント翌日として扱う
   relativeTimeLabel: string | null;
   stage: string | null;
   booth: string | null;

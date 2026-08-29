@@ -1,5 +1,5 @@
-import { GlmOcrEngine } from "./glm-engine";
 import { GLM_CACHE_NAME } from "./config";
+import { WorkerOcrEngine } from "./worker-engine";
 import type { OcrEngine, OcrEngineKind } from "./types";
 
 export { GLM_CACHE_NAME, OCR_ENGINES } from "./config";
@@ -7,7 +7,7 @@ export type { OcrEngine, OcrEngineInfo, OcrEngineKind, OcrProgress, OcrResult, O
 
 export function createOcrEngine(kind: OcrEngineKind = "glm-ocr"): OcrEngine {
   void kind;
-  return new GlmOcrEngine();
+  return new WorkerOcrEngine();
 }
 
 export async function clearOcrModelCache(): Promise<void> {
