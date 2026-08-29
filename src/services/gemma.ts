@@ -87,10 +87,7 @@ export async function structureWithGemmaInWorker(
     conversation = await engine.createConversation({
       preface: { messages: [{ role: "system", content: SYSTEM_PROMPT }] },
     });
-    const ocrContext = JSON.stringify({ text: ocrResult.text, regions: ocrResult.regions });
-    const response = await conversation.sendMessage(
-      `次のOCR結果だけを根拠にJSONへ変換してください。\n\n${ocrContext.slice(0, 24000)}`,
-    );
+    const response = await conversation.sendMessage(createGemmaUserPrompt(ocrResult));
     const content = response.content;
     const text =
       typeof content === "string"
@@ -108,6 +105,11 @@ export async function structureWithGemmaInWorker(
       await engine.delete();
     }
   }
+}
+
+export function createGemmaUserPrompt(ocrResult: OcrResult): string {
+  const ocrContext = JSON.stringify({ text: ocrResult.text, regions: ocrResult.regions });
+  return `次のOCR結果だけを根拠にJSONへ変換してください。\n\n${ocrContext}`;
 }
 
 export function parseGemmaDocument(raw: string): TimetableDocument {
