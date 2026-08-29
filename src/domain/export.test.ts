@@ -4,6 +4,7 @@ import { buildIcsCalendar, buildTimelineSvg, createExportFileName } from "./expo
 
 const scheduleTypeLabels = { live: "LIVE", meet_and_greet: "Meet & Greet", merch: "Merch", other: "Other" };
 const exportLabels = {
+  defaultTitle: "My Timetable",
   scheduleTypes: scheduleTypeLabels,
   timelineDescription: (count: number) => `Timeline with ${count} schedules`,
   untimed: "Time not set",

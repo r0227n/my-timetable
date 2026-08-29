@@ -47,7 +47,7 @@ export function TimelineStep({ document, schedules, options, onChange, onBack, o
             <span>{t("title")}</span>
             <input
               value={options.title}
-              placeholder={document.event.name || "My Timetable"}
+              placeholder={document.event.name || labels.defaultTitle}
               onChange={(event) => onChange({ ...options, title: event.target.value })}
             />
           </label>

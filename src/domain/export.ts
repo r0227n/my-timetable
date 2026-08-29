@@ -16,6 +16,7 @@ export interface TimelineOptions {
 }
 
 export interface ExportLabels {
+  defaultTitle: string;
   scheduleTypes: Record<ScheduleType, string>;
   timelineDescription: (count: number) => string;
   untimed: string;
@@ -32,7 +33,7 @@ export function buildTimelineSvg(
 ): string {
   const width = Math.max(320, Math.round(options.width));
   const height = Math.max(320, Math.round(options.height));
-  const title = escapeXml(options.title || document.event.name || "My Timetable");
+  const title = escapeXml(options.title || document.event.name || labels.defaultTitle);
   const subtitle = [
     options.showDate && document.event.date
       ? labels.formatDate(document.event.date, document.event.timezone)

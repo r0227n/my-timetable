@@ -4,6 +4,7 @@
   "previewLabel": "Timeline preview",
   "previewAlt": "Generated timeline preview",
   "title": "Title",
+  "defaultTitle": "My Timetable",
   "layout": "Layout",
   "vertical": "Vertical",
   "horizontal": "Horizontal",

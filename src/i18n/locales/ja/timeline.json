@@ -4,6 +4,7 @@
   "previewLabel": "タイムラインプレビュー",
   "previewAlt": "生成したタイムラインのプレビュー",
   "title": "タイトル",
+  "defaultTitle": "マイタイムテーブル",
   "layout": "レイアウト",
   "vertical": "縦型",
   "horizontal": "横型",

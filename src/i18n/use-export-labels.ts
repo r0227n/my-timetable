@@ -11,6 +11,7 @@ export function useExportLabels(): ExportLabels {
   const language = currentLanguage();
   return useMemo(
     () => ({
+      defaultTitle: t("defaultTitle"),
       scheduleTypes: Object.fromEntries(
         scheduleTypes.map((type) => [type, tCommon(`scheduleTypes.${type}`)]),
       ) as Record<ScheduleType, string>,
