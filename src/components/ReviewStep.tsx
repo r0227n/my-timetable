@@ -258,6 +258,14 @@ export function ReviewStep({ document, sourceUrl, onChange, onBack, onNext }: Re
                         value={item.endTime ?? ""}
                         onChange={(e) => updateSchedule(item.id, { endTime: e.target.value || null })}
                       />
+                      <label className="inline-checkbox">
+                        <input
+                          type="checkbox"
+                          checked={item.endsNextDay}
+                          onChange={(e) => updateSchedule(item.id, { endsNextDay: e.target.checked })}
+                        />
+                        <span>翌日</span>
+                      </label>
                       {invalidTimeRanges.has(item.id) ? (
                         <small className="cell-warning">{t("invalidRange")}</small>
                       ) : null}

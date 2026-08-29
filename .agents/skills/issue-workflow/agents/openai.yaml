@@ -1,0 +1,4 @@
+interface:
+  display_name: "Issue Workflow"
+  short_description: "GitHub Issueから実装・検証・PR作成まで進める"
+  default_prompt: "Use $issue-workflow to implement the specified GitHub Issue and create its pull request."

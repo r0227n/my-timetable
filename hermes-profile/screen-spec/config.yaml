@@ -1,0 +1,22 @@
+_config_version: 38
+agent:
+  bot_mode_protocol: true
+model:
+  api_key: ollama
+  base_url: http://127.0.0.1:11434/v1
+  default: orcarouter/Qwen3.8-27B-Uncensored:latest
+  provider: ollama-launch
+providers:
+  ollama-launch:
+    api: http://127.0.0.1:11434/v1
+    default_model: orcarouter/Qwen3.8-27B-Uncensored:latest
+    models:
+      - orcarouter/Qwen3.8-27B-Uncensored:latest
+      - gemma4:31b-mlx
+    name: Ollama
+toolsets:
+  - hermes-cli
+  - web
+terminal:
+  backend: local
+  cwd: .

@@ -73,6 +73,21 @@ describe("timeline export", () => {
     expect(createExportFileName(document)).toBe("Example-Festival-2026-08-27-my-timetable");
   });
 
+  it("advances the calendar end date for a schedule that crosses midnight", () => {
+    const overnight = createBlankSchedule({
+      id: "overnight",
+      artist: "Late Show",
+      startTime: "23:30",
+      endTime: "00:30",
+      endsNextDay: true,
+    });
+
+    const ics = buildIcsCalendar(document, [overnight], scheduleTypeLabels);
+
+    expect(ics).toContain("DTSTART;TZID=Asia/Tokyo:20260827T233000");
+    expect(ics).toContain("DTEND;TZID=Asia/Tokyo:20260828T003000");
+  });
+
   it("positions timed cards on a constant time scale and separates simultaneous schedules", () => {
     const schedules = [
       createBlankSchedule({ id: "early", artist: "Early", startTime: "10:00", endTime: "10:20" }),

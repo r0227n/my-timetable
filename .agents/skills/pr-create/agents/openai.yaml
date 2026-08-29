@@ -1,0 +1,4 @@
+interface:
+  display_name: "PR Create"
+  short_description: "テンプレートと検証結果に基づくGitHub PR作成"
+  default_prompt: "Use $pr-create to validate this branch and create its GitHub pull request."

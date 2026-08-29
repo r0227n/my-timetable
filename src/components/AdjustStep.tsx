@@ -1,6 +1,7 @@
+import { useEffect, useRef, useState } from "react";
 import { RotateCcw, RotateCw, SlidersHorizontal, Undo2 } from "lucide-react";
-import { defaultAdjustments, type ImageAdjustments } from "../lib/image";
 import { useTranslation } from "react-i18next";
+import { defaultAdjustments, fitImagePreview, type ImageAdjustments } from "../lib/image";
 
 interface AdjustStepProps {
   sourceUrl: string;
@@ -13,6 +14,20 @@ interface AdjustStepProps {
 export function AdjustStep({ sourceUrl, adjustments, onChange, onBack, onAnalyze }: AdjustStepProps) {
   const { t } = useTranslation("adjust");
   const { t: tCommon } = useTranslation("common");
+  const stageRef = useRef<HTMLDivElement>(null);
+  const [sourceSize, setSourceSize] = useState<{ width: number; height: number } | null>(null);
+  const [stageSize, setStageSize] = useState<{ width: number; height: number } | null>(null);
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    const updateSize = () => setStageSize({ width: stage.clientWidth, height: stage.clientHeight });
+    updateSize();
+    const observer = new ResizeObserver(updateSize);
+    observer.observe(stage);
+    return () => observer.disconnect();
+  }, []);
+  const previewSize =
+    sourceSize && stageSize ? fitImagePreview(sourceSize, stageSize, adjustments.rotation) : null;
   const setCrop = (side: keyof ImageAdjustments["crop"], value: number) => {
     const crop = { ...adjustments.crop, [side]: value };
     const horizontal = crop.left + crop.right;
@@ -34,21 +49,35 @@ export function AdjustStep({ sourceUrl, adjustments, onChange, onBack, onAnalyze
       </div>
       <div className="adjust-layout">
         <section className="preview-panel" aria-label={t("previewLabel")}>
-          <div className="image-stage">
+          <div className="image-stage" ref={stageRef}>
             <div
-              className="crop-frame"
+              className="image-preview"
               style={{
-                inset: `${adjustments.crop.top}% ${adjustments.crop.right}% ${adjustments.crop.bottom}% ${adjustments.crop.left}%`,
-              }}
-            />
-            <img
-              src={sourceUrl}
-              alt={t("imageAlt")}
-              style={{
+                width: previewSize?.width,
+                height: previewSize?.height,
                 transform: `rotate(${adjustments.rotation}deg)`,
-                filter: `brightness(${adjustments.brightness}%) contrast(${adjustments.contrast}%)`,
               }}
-            />
+            >
+              <img
+                src={sourceUrl}
+                alt={t("imageAlt")}
+                onLoad={(event) =>
+                  setSourceSize({
+                    width: event.currentTarget.naturalWidth,
+                    height: event.currentTarget.naturalHeight,
+                  })
+                }
+                style={{
+                  filter: `brightness(${adjustments.brightness}%) contrast(${adjustments.contrast}%)`,
+                }}
+              />
+              <div
+                className="crop-frame"
+                style={{
+                  inset: `${adjustments.crop.top}% ${adjustments.crop.right}% ${adjustments.crop.bottom}% ${adjustments.crop.left}%`,
+                }}
+              />
+            </div>
           </div>
           <p>{t("outsideCrop")}</p>
         </section>

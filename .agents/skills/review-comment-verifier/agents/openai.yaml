@@ -1,0 +1,4 @@
+interface:
+  display_name: "Review Comment Verifier"
+  short_description: "Verify AI review comments and apply traceable fixes"
+  default_prompt: "Use $review-comment-verifier to verify unresolved AI review comments on this pull request and respond with traceable fixes."

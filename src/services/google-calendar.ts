@@ -87,6 +87,7 @@ function toGoogleEvent(
   scheduleTypeLabels: Record<ScheduleType, string>,
 ): GoogleCalendarEvent {
   const date = document.event.date!;
+  const endDate = schedule.endsNextDay ? addDays(date, 1) : date;
   const location = schedule.stage ?? schedule.booth ?? document.event.venue ?? undefined;
   return {
     summary: `${schedule.artist} - ${scheduleTypeLabels[schedule.type]}`,
@@ -95,14 +96,22 @@ function toGoogleEvent(
       .filter(Boolean)
       .join("\n"),
     start: { dateTime: `${date}T${schedule.startTime}:00`, timeZone: document.event.timezone },
-    end: { dateTime: `${date}T${schedule.endTime}:00`, timeZone: document.event.timezone },
+    end: { dateTime: `${endDate}T${schedule.endTime}:00`, timeZone: document.event.timezone },
   };
 }
 
 export function isCalendarScheduleRegisterable(
   schedule: ScheduleItem,
 ): schedule is ScheduleItem & { startTime: string; endTime: string } {
-  return Boolean(schedule.startTime && schedule.endTime && schedule.endTime > schedule.startTime);
+  return Boolean(
+    schedule.startTime && schedule.endTime && (schedule.endsNextDay || schedule.endTime > schedule.startTime),
+  );
+}
+
+function addDays(date: string, days: number): string {
+  const value = new Date(`${date}T00:00:00Z`);
+  value.setUTCDate(value.getUTCDate() + days);
+  return value.toISOString().slice(0, 10);
 }
 
 export function selectFailedCalendarSchedules(

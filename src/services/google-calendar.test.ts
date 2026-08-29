@@ -61,4 +61,33 @@ describe("Google Calendar registration", () => {
       ),
     ).toEqual([failed]);
   });
+
+  it("registers an explicitly confirmed overnight schedule on the following date", async () => {
+    const document = {
+      ...createEmptyDocument(),
+      event: { ...createEmptyDocument().event, date: "2026-08-27" },
+    };
+    const overnight = createBlankSchedule({
+      id: "overnight",
+      startTime: "23:30",
+      endTime: "00:30",
+      endsNextDay: true,
+    });
+    const insertEvent = vi.fn<GoogleCalendarAdapter["insertEvent"]>(async () => undefined);
+
+    await registerSchedulesWithGoogleCalendar(
+      document,
+      [overnight],
+      {
+        authorize: async () => "token",
+        insertEvent,
+      },
+      scheduleTypeLabels,
+    );
+
+    expect(insertEvent).toHaveBeenCalledWith(
+      "token",
+      expect.objectContaining({ end: { dateTime: "2026-08-28T00:30:00", timeZone: "Asia/Tokyo" } }),
+    );
+  });
 });

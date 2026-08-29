@@ -15,6 +15,18 @@ export const defaultAdjustments: ImageAdjustments = {
 export const acceptedImageTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 export const maxFileSize = 20 * 1024 * 1024;
 
+export function fitImagePreview(
+  source: { width: number; height: number },
+  stage: { width: number; height: number },
+  rotation: ImageAdjustments["rotation"],
+): { width: number; height: number } {
+  const swapsAxes = rotation === 90 || rotation === 270;
+  const rotatedWidth = swapsAxes ? source.height : source.width;
+  const rotatedHeight = swapsAxes ? source.width : source.height;
+  const scale = Math.min((stage.width * 0.9) / rotatedWidth, (stage.height * 0.9) / rotatedHeight);
+  return { width: source.width * scale, height: source.height * scale };
+}
+
 export function validateImageFile(file: File): AppErrorCode | null {
   if (!acceptedImageTypes.has(file.type)) return "imageInvalidType";
   if (file.size > maxFileSize) return "imageTooLarge";
