@@ -5,6 +5,33 @@ import { createBlankSchedule, createEmptyDocument } from "../domain/timetable";
 import { ReviewStep } from "./ReviewStep";
 
 describe("ReviewStep", () => {
+  it("orders filtered schedules chronologically without changing document order", () => {
+    const document = {
+      ...createEmptyDocument(),
+      event: { ...createEmptyDocument().event, date: "2026-08-30" },
+      schedules: [
+        createBlankSchedule({ id: "later", artist: "Later", startTime: "11:00", endTime: "11:30" }),
+        createBlankSchedule({ id: "earlier", artist: "Earlier", startTime: "10:00", endTime: "10:30" }),
+      ],
+    };
+
+    render(
+      <ReviewStep
+        document={document}
+        sourceUrl={null}
+        onChange={vi.fn()}
+        onBack={vi.fn()}
+        onNext={vi.fn()}
+      />,
+    );
+
+    expect(screen.getAllByRole("button", { name: /Earlier|Later/ }).map((button) => button.textContent)).toEqual([
+      "Earlier",
+      "Later",
+    ]);
+    expect(document.schedules.map((item) => item.artist)).toEqual(["Later", "Earlier"]);
+  });
+
   it("moves details to a visible row when the selected schedule leaves the active filter", async () => {
     const user = userEvent.setup();
     const document = {
@@ -39,7 +66,7 @@ describe("ReviewStep", () => {
       />,
     );
 
-    await user.click(screen.getByRole("checkbox", { name: "markVerified" }));
+    await user.click(screen.getByRole("checkbox", { name: /markVerified|Alphaを確認済みにする/ }));
     view.rerender(
       <ReviewStep
         document={onChange.mock.calls[0][0]}

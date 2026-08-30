@@ -12,6 +12,7 @@ import {
 } from "../domain/schedule-review";
 import {
   createBlankSchedule,
+  resolveScheduleDate,
   scheduleTypes,
   type ScheduleItem,
   type TimetableDocument,
@@ -39,7 +40,14 @@ export function ReviewStep({ document, sourceUrl, onChange, onBack, onNext }: Re
   const duplicates = findDuplicateIds(document.schedules, document.event.date);
   const invalidRanges = findInvalidTimeRangeIds(document.schedules);
   const filtered = useMemo(
-    () => document.schedules.filter((item) => matchesReviewFilter(document, item, filter)),
+    () =>
+      document.schedules
+        .filter((item) => matchesReviewFilter(document, item, filter))
+        .toSorted((a, b) =>
+          `${resolveScheduleDate(document, a) ?? "9999"} ${a.startTime ?? "99:99"}`.localeCompare(
+            `${resolveScheduleDate(document, b) ?? "9999"} ${b.startTime ?? "99:99"}`,
+          ),
+        ),
     [document, filter],
   );
   const effectiveSelectedId = filtered.some((item) => item.id === selectedId)
