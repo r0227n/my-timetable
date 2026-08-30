@@ -120,12 +120,12 @@ describe("Phase 1 manual flow", () => {
     await user.type(screen.getByLabelText("終了時刻"), "10:30");
     await user.click(screen.getByRole("checkbox", { name: "Artist Aを確認済みにする" }));
     await user.click(screen.getByRole("button", { name: "予定を選ぶ" }));
-    await user.click(screen.getByRole("button", { name: "タイムラインを作る" }));
+    await user.click(await screen.findByRole("button", { name: "タイムラインを作る" }));
 
     expect(await screen.findByRole("heading", { name: "タイムラインを整える" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "出力へ進む" }));
-    expect(screen.getByRole("button", { name: "SVGを保存" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "PNGを保存" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "ICSを保存" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "SVGを保存" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "PNGを保存" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "ICSを保存" })).toBeInTheDocument();
   });
 });
