@@ -118,16 +118,16 @@ export function UploadStep({ webGpu, gemmaModel = "e2b", onFile, onManual }: Upl
         <button className="text-button" type="button" onClick={onManual}>
           {t("manual")}
         </button>
-        <div className="device-row">
+        <div className="device-row" aria-live="polite">
           <div>
-            <span className={`status-light ${webGpu ? "ok" : "warn"}`} />
+            <span className={`status-light ${webGpu ? "ok" : "warn"}`} aria-hidden="true" />
             <span>
               <strong>{webGpu ? t("webGpuSupported") : t("webGpuUnsupported")}</strong>
-              <small>{webGpu ? t("aiAvailable") : t("manualAvailable")}</small>
+              <small>{webGpu ? t("aiAvailable") : t("webGpuRecommendation")}</small>
             </span>
           </div>
           <div>
-            <FileImage size={18} />
+            <FileImage size={18} aria-hidden="true" />
             <span>
               <strong>{t("firstModel")}</strong>
               <small>
@@ -137,7 +137,7 @@ export function UploadStep({ webGpu, gemmaModel = "e2b", onFile, onManual }: Upl
           </div>
         </div>
         <div className="local-chip">
-          <LockKeyhole size={13} /> {t("localOnly")}
+          <LockKeyhole size={13} aria-hidden="true" /> {t("localOnly")}
         </div>
       </section>
     </main>

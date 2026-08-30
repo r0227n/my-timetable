@@ -65,6 +65,24 @@ describe("Phase 1 manual flow", () => {
     expect(await screen.findByText("時間の重なりはありません")).toBeInTheDocument();
   });
 
+  it("explains the WebGPU fallback and moves focus after keyboard navigation", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    expect(
+      screen.getByText(/AI解析は利用できません。最新版ChromeまたはEdgeを使用するか/),
+    ).toBeInTheDocument();
+
+    await user.tab();
+    expect(screen.getByRole("link", { name: "メインコンテンツへ移動" })).toHaveFocus();
+    await user.keyboard("{Enter}");
+    expect(document.querySelector("#main-content")).toHaveFocus();
+
+    await user.click(screen.getByRole("button", { name: "画像を使わず手入力ではじめる" }));
+    expect(document.querySelector("#main-content")).toHaveFocus();
+    expect(await screen.findByRole("heading", { name: "読み取り結果を確認" })).toBeInTheDocument();
+  });
+
   it("keeps selections that are hidden by a filter when selecting every visible schedule", async () => {
     const user = userEvent.setup();
     render(<App />);

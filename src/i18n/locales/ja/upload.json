@@ -13,6 +13,7 @@
   "webGpuUnsupported": "WebGPU 非対応",
   "aiAvailable": "AI解析を利用できます",
   "manualAvailable": "手入力を利用できます",
+  "webGpuRecommendation": "AI解析は利用できません。最新版ChromeまたはEdgeを使用するか、手入力ではじめてください。",
   "firstModel": "初回モデル",
   "localOnly": "ローカル処理のみ"
 }

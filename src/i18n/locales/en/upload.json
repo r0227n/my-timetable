@@ -13,6 +13,7 @@
   "webGpuUnsupported": "WebGPU unavailable",
   "aiAvailable": "AI analysis is available",
   "manualAvailable": "Manual entry is available",
+  "webGpuRecommendation": "AI analysis is unavailable. Use the latest Chrome or Edge, or start with manual entry.",
   "firstModel": "Initial models",
   "localOnly": "On-device processing only"
 }
