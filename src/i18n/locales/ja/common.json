@@ -6,6 +6,16 @@
     "ja": "日本語",
     "en": "English"
   },
+  "model": {
+    "label": "Gemmaモデル",
+    "button": "選択中のモデル: {{model}}",
+    "nextAnalysis": "変更は次回の解析開始時から反映されます。進行中の解析は変更されません。",
+    "unavailable": {
+      "webgpu": "WebGPUに対応していないため利用できません。",
+      "memory": "端末メモリが8GB未満のため利用できません。",
+      "memory-unknown": "利用可能な端末メモリを確認できないため利用できません。"
+    }
+  },
   "header": {
     "debug": "デバッグ",
     "clearCache": "AIモデルのキャッシュを削除",
