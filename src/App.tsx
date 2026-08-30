@@ -11,6 +11,7 @@ import { ExportStep } from "./components/ExportStep";
 import { createEmptyDocument, type TimetableDocument } from "./domain/timetable";
 import { selectableSchedules } from "./domain/schedule-review";
 import type { TimelineOptions } from "./domain/export";
+import type { OcrResult } from "@my-timetable/glm-ocr-web";
 import { defaultAdjustments, renderAdjustedImage, type ImageAdjustments } from "./lib/image";
 import { analyzeTimetable, type AnalysisUpdate } from "#analysis";
 import { clearAllModelCaches } from "./services/model-cache";
@@ -63,6 +64,7 @@ export default function App() {
   const analysisImageUrlRef = useRef<string | null>(null);
   const [adjustments, setAdjustments] = useState<ImageAdjustments>(defaultAdjustments);
   const [timetable, setTimetable] = useState<TimetableDocument>(createEmptyDocument);
+  const [ocrResult, setOcrResult] = useState<OcrResult | null>(null);
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
   const [timelineOptions, setTimelineOptions] = useState<TimelineOptions>(initialTimelineOptions);
   const [analysis, setAnalysis] = useState<AnalysisState>(initialAnalysis);
@@ -104,6 +106,7 @@ export default function App() {
       replaceObjectUrl(analysisImageUrlRef, image, setAnalysisImageUrl);
       const result = await analyzeTimetable(image, handleAnalysisUpdate, nextController.signal, gemmaModel);
       setTimetable(result.document);
+      setOcrResult(result.ocrResult);
       setStep(3);
     } catch (error) {
       if (nextController.signal.aborted) {
@@ -130,6 +133,7 @@ export default function App() {
   const manual = () => {
     replaceObjectUrl(analysisImageUrlRef, null, setAnalysisImageUrl);
     setTimetable(createEmptyDocument());
+    setOcrResult(null);
     setStep(3);
   };
 
@@ -165,6 +169,7 @@ export default function App() {
             replaceObjectUrl(sourceUrlRef, nextFile, setSourceUrl);
             replaceObjectUrl(analysisImageUrlRef, null, setAnalysisImageUrl);
             setAdjustments(defaultAdjustments);
+            setOcrResult(null);
             setStep(1);
           }}
           onManual={manual}
@@ -193,6 +198,7 @@ export default function App() {
         <ReviewStep
           document={timetable}
           sourceUrl={analysisImageUrl ?? sourceUrl}
+          ocrResult={ocrResult}
           onChange={setTimetable}
           onBack={() => setStep(sourceUrl ? 1 : 0)}
           onNext={() => {

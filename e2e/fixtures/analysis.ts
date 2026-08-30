@@ -1,5 +1,6 @@
 import type { TimetableDocument } from "../../src/domain/timetable";
 import type { AnalysisUpdate } from "../../src/services/analysis-contract";
+import type { OcrResult } from "@my-timetable/glm-ocr-web";
 
 const document: TimetableDocument = {
   schemaVersion: 2,
@@ -26,7 +27,7 @@ const document: TimetableDocument = {
       stage: "STAGE A",
       booth: null,
       attributes: {},
-      confidence: "high",
+      confidence: "low",
       verified: false,
       sourceRegions: [{ x: 0, y: 430, width: 300, height: 650 }],
     },
@@ -54,12 +55,37 @@ export async function analyzeTimetable(
   image: Blob,
   onUpdate: (update: AnalysisUpdate) => void,
   signal: AbortSignal,
-): Promise<{ document: TimetableDocument; ocrText: string }> {
+): Promise<{ document: TimetableDocument; ocrResult: OcrResult }> {
   if (!image.type.startsWith("image/") || image.size === 0) throw new Error("E2E fixture requires an image");
   await update(onUpdate, { step: "ocr", stage: "model", progress: 0.25, message: "fake model" }, signal);
   await update(onUpdate, { step: "ocr", stage: "recognition", progress: 0.75, message: "fake OCR" }, signal);
   await update(onUpdate, { step: "gemma", progress: null }, signal);
-  return { document, ocrText: "10:00 ALPHA\n11:00 ベータ" };
+  return {
+    document,
+    ocrResult: {
+      text: "10:00 ALPHA\n11:00 ベータ",
+      engine: "glm-ocr",
+      image: { width: 600, height: 1600 },
+      regions: [
+        {
+          id: "alpha-region",
+          kind: "column",
+          text: "10:00 ALPHA",
+          order: 0,
+          confidence: 0.98,
+          region: { x: 0, y: 430, width: 300, height: 650 },
+        },
+        {
+          id: "beta-region",
+          kind: "column",
+          text: "11:00 ベータ",
+          order: 1,
+          confidence: 0.72,
+          region: { x: 0, y: 1080, width: 300, height: 340 },
+        },
+      ],
+    },
+  };
 }
 
 async function update(
