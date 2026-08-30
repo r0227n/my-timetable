@@ -12,7 +12,7 @@
   "brightness": "明るさ",
   "contrast": "コントラスト",
   "crop": "切り抜き",
-  "cropInstructions": "枠内をドラッグして移動、辺と角をドラッグしてサイズを変更できます。矢印キーでは1%、Shift＋矢印キーでは5%調整します。",
+  "cropInstructions": "枠内をドラッグして移動、辺と角をドラッグしてサイズを変更できます。この画面では矢印キーだけで枠全体を1%、Shift＋矢印キーで5%移動できます。",
   "cropMove": "切り抜き領域を移動",
   "cropHandle": "切り抜き領域の{{direction}}を調整",
   "directions": {

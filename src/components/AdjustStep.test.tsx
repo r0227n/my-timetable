@@ -94,4 +94,29 @@ describe("AdjustStep crop controls", () => {
       expect.objectContaining({ crop: { top: 10, right: 25, bottom: 30, left: 15 } }),
     );
   });
+
+  it("moves the crop with arrow keys without selecting a crop control", () => {
+    const onChange = renderAdjust();
+    const image = screen.getByAltText("アップロードしたタイムテーブル");
+    Object.defineProperties(image, {
+      naturalWidth: { value: 1000 },
+      naturalHeight: { value: 500 },
+    });
+    fireEvent.load(image);
+
+    fireEvent.keyDown(window, { key: "ArrowRight", shiftKey: true });
+
+    expect(onChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ crop: { top: 10, right: 15, bottom: 30, left: 20 } }),
+    );
+  });
+
+  it("leaves arrow keys available to adjustment sliders", () => {
+    const onChange = renderAdjust();
+    const brightness = screen.getByRole("slider", { name: "明るさ" });
+
+    fireEvent.keyDown(brightness, { key: "ArrowRight" });
+
+    expect(onChange).not.toHaveBeenCalled();
+  });
 });

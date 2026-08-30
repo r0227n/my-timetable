@@ -166,6 +166,38 @@ function CropOverlay({
     adjustmentsRef.current = adjustments;
   }, [adjustments]);
 
+  const applyKeyboardAdjustment = (key: string, shiftKey: boolean, handle: CropHandle) => {
+    const step = shiftKey ? 5 : 1;
+    const screenDelta =
+      key === "ArrowLeft"
+        ? { dx: -step, dy: 0 }
+        : key === "ArrowRight"
+          ? { dx: step, dy: 0 }
+          : key === "ArrowUp"
+            ? { dx: 0, dy: -step }
+            : key === "ArrowDown"
+              ? { dx: 0, dy: step }
+              : null;
+    if (!screenDelta) return false;
+    const current = adjustmentsRef.current;
+    const delta = screenStepToImagePercent(screenDelta.dx, screenDelta.dy, current.rotation);
+    const next = { ...current, crop: updateCrop(current.crop, handle, delta.dx, delta.dy) };
+    adjustmentsRef.current = next;
+    onChange(next);
+    return true;
+  };
+
+  useEffect(() => {
+    const moveCropWithArrowKeys = (event: KeyboardEvent) => {
+      if (event.ctrlKey || event.metaKey || event.altKey || isTextOrRangeInput(event.target)) return;
+      if (event.target instanceof Element && event.target.closest(".crop-frame")) return;
+      if (!applyKeyboardAdjustment(event.key, event.shiftKey, "move")) return;
+      event.preventDefault();
+    };
+    window.addEventListener("keydown", moveCropWithArrowKeys);
+    return () => window.removeEventListener("keydown", moveCropWithArrowKeys);
+  });
+
   const startDrag = (event: React.PointerEvent<HTMLElement>, handle: CropHandle) => {
     event.preventDefault();
     event.stopPropagation();
@@ -195,24 +227,9 @@ function CropOverlay({
   };
 
   const keyDown = (event: React.KeyboardEvent<HTMLElement>, handle: CropHandle) => {
-    const step = event.shiftKey ? 5 : 1;
-    const screenDelta =
-      event.key === "ArrowLeft"
-        ? { dx: -step, dy: 0 }
-        : event.key === "ArrowRight"
-          ? { dx: step, dy: 0 }
-          : event.key === "ArrowUp"
-            ? { dx: 0, dy: -step }
-            : event.key === "ArrowDown"
-              ? { dx: 0, dy: step }
-              : null;
-    if (!screenDelta) return;
+    if (!applyKeyboardAdjustment(event.key, event.shiftKey, handle)) return;
     event.preventDefault();
-    const current = adjustmentsRef.current;
-    const delta = screenStepToImagePercent(screenDelta.dx, screenDelta.dy, current.rotation);
-    const next = { ...current, crop: updateCrop(current.crop, handle, delta.dx, delta.dy) };
-    adjustmentsRef.current = next;
-    onChange(next);
+    event.stopPropagation();
   };
 
   return (
@@ -248,6 +265,15 @@ function CropOverlay({
         />
       ))}
     </div>
+  );
+}
+
+function isTextOrRangeInput(target: EventTarget | null): boolean {
+  return (
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    target instanceof HTMLSelectElement ||
+    (target instanceof HTMLElement && target.isContentEditable)
   );
 }
 
