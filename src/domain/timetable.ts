@@ -1,4 +1,4 @@
-import { z } from "zod";
+import * as z from "zod";
 
 export const confidenceLevels = ["high", "medium", "low"] as const;
 export const scheduleTypes = ["live", "meet_and_greet", "merch", "other"] as const;

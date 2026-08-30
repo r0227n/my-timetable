@@ -17,11 +17,11 @@ test("analyzes an uploaded timetable and opens review", async ({ page }, testInf
 
   const rows = page.locator(".schedule-table tbody tr");
   expect(await rows.count()).toBeGreaterThan(0);
-  await expect(rows.first().locator("td input").first()).not.toHaveValue("");
+  await expect(rows.first().locator(".schedule-select")).not.toHaveText("");
   if (fake) {
     await expect(rows).toHaveCount(2);
-    await expect(rows.nth(0).locator("td input").first()).toHaveValue("ALPHA");
-    await expect(rows.nth(1).locator("td input").first()).toHaveValue("ベータ");
+    await expect(rows.nth(0).locator(".schedule-select")).toHaveText("ALPHA");
+    await expect(rows.nth(1).locator(".schedule-select")).toHaveText("ベータ");
   }
   expect(pageErrors).toEqual([]);
 });

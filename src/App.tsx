@@ -9,6 +9,7 @@ import { SelectionStep } from "./components/SelectionStep";
 import { TimelineStep } from "./components/TimelineStep";
 import { ExportStep } from "./components/ExportStep";
 import { createEmptyDocument, type TimetableDocument } from "./domain/timetable";
+import { selectableSchedules } from "./domain/schedule-review";
 import type { TimelineOptions } from "./domain/export";
 import { defaultAdjustments, renderAdjustedImage, type ImageAdjustments } from "./lib/image";
 import { analyzeTimetable, type AnalysisUpdate } from "#analysis";
@@ -195,14 +196,14 @@ export default function App() {
           onChange={setTimetable}
           onBack={() => setStep(sourceUrl ? 1 : 0)}
           onNext={() => {
-            setSelected(new Set(timetable.schedules.map((item) => item.id)));
+            setSelected(new Set(selectableSchedules(timetable).map((item) => item.id)));
             setStep(4);
           }}
         />
       ) : null}
       {step === 4 ? (
         <SelectionStep
-          document={timetable}
+          document={{ ...timetable, schedules: selectableSchedules(timetable) }}
           selected={selected}
           onSelectedChange={setSelected}
           onBack={() => setStep(3)}
