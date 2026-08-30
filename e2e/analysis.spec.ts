@@ -22,6 +22,10 @@ test("analyzes an uploaded timetable and opens review", async ({ page }, testInf
     await expect(rows).toHaveCount(2);
     await expect(rows.nth(0).locator(".schedule-select")).toHaveText("ALPHA");
     await expect(rows.nth(1).locator(".schedule-select")).toHaveText("ベータ");
+    await expect(page.locator(".source-region-overlay rect")).toHaveCount(1);
+    await expect(page.locator(".ocr-evidence")).toContainText("10:00 ALPHA");
+    await expect(page.locator(".ocr-evidence")).toContainText("98%");
+    await expect(page.locator(".detail-form")).toHaveClass(/low-confidence-fields/);
   }
   expect(pageErrors).toEqual([]);
 });

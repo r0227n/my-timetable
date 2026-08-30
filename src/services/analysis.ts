@@ -11,7 +11,7 @@ export async function analyzeTimetable(
   onUpdate: (update: AnalysisUpdate) => void,
   signal: AbortSignal,
   gemmaModel: GemmaModelId = "e2b",
-): Promise<{ document: TimetableDocument; ocrText: string }> {
+): Promise<{ document: TimetableDocument; ocrResult: OcrResult }> {
   const ocrResult = await recognizeImage(image, (progress) => onUpdate({ step: "ocr", ...progress }), signal);
   const ocrText = ocrResult.text;
   if (!ocrText.trim()) throw new AppError("analysisNoText");
@@ -22,7 +22,7 @@ export async function analyzeTimetable(
     signal,
     gemmaModel,
   );
-  return { document, ocrText };
+  return { document, ocrResult };
 }
 
 export async function recognizeImage(

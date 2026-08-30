@@ -19,17 +19,19 @@ import {
 } from "../domain/timetable";
 import { formatNumber } from "../i18n/format";
 import { currentLanguage } from "../i18n/i18n";
+import type { OcrResult, OcrTextRegion } from "@my-timetable/glm-ocr-web";
 
 interface ReviewStepProps {
   document: TimetableDocument;
   sourceUrl: string | null;
+  ocrResult: OcrResult | null;
   onChange: (document: TimetableDocument) => void;
   onBack: () => void;
   onNext: () => void;
 }
 type MobilePanel = "details" | "source";
 
-export function ReviewStep({ document, sourceUrl, onChange, onBack, onNext }: ReviewStepProps) {
+export function ReviewStep({ document, sourceUrl, ocrResult, onChange, onBack, onNext }: ReviewStepProps) {
   const { t } = useTranslation("review");
   const { t: tc } = useTranslation("common");
   const language = currentLanguage();
@@ -54,6 +56,11 @@ export function ReviewStep({ document, sourceUrl, onChange, onBack, onNext }: Re
     ? selectedId
     : (filtered[0]?.id ?? null);
   const selected = document.schedules.find((item) => item.id === effectiveSelectedId) ?? null;
+  const selectedOcrRegions = selected
+    ? (ocrResult?.regions.filter((region) =>
+        selected.sourceRegions.some((sourceRegion) => regionsOverlap(region.region, sourceRegion)),
+      ) ?? [])
+    : [];
   const eligible = document.schedules.filter((item) => !item.verified && canVerifySchedule(document, item));
   const selectable = selectableSchedules(document);
   const excludedCount = document.schedules.length - selectable.length;
@@ -218,6 +225,14 @@ export function ReviewStep({ document, sourceUrl, onChange, onBack, onNext }: Re
                 </svg>
               ) : null}
             </div>
+            {selectedOcrRegions.length ? (
+              <section className="ocr-evidence" aria-label={t("ocrEvidence")}>
+                <h3>{t("ocrEvidence")}</h3>
+                {selectedOcrRegions.map((region) => (
+                  <OcrEvidence key={region.id} region={region} t={t} />
+                ))}
+              </section>
+            ) : null}
           </aside>
         ) : null}
         <section className="schedule-panel panel">
@@ -381,7 +396,8 @@ function ScheduleDetails({
 }: DetailProps) {
   const valid = canVerifySchedule(document, item);
   return (
-    <div className="detail-form">
+    <div className={`detail-form ${item.confidence === "low" ? "low-confidence-fields" : ""}`}>
+      {item.confidence === "low" ? <p className="low-confidence-notice">{t("lowConfidenceNotice")}</p> : null}
       <label>
         <span>{t("artist")}</span>
         <input
@@ -522,6 +538,34 @@ function ScheduleDetails({
         </button>
       </div>
     </div>
+  );
+}
+
+function OcrEvidence({ region, t }: { region: OcrTextRegion; t: TFunction<"review"> }) {
+  return (
+    <div className="ocr-evidence-item">
+      <p>{region.text}</p>
+      <small>
+        {t("ocrOrder", { order: region.order + 1 })} · {t("ocrConfidence")}:{" "}
+        {formatOcrConfidence(region.confidence)}
+      </small>
+    </div>
+  );
+}
+
+function formatOcrConfidence(confidence: number | null): string {
+  return confidence === null ? "—" : `${Math.round(confidence * 100)}%`;
+}
+
+function regionsOverlap(
+  left: { x: number; y: number; width: number; height: number },
+  right: { x: number; y: number; width: number; height: number },
+): boolean {
+  return (
+    left.x < right.x + right.width &&
+    left.x + left.width > right.x &&
+    left.y < right.y + right.height &&
+    left.y + left.height > right.y
   );
 }
 function formatAttributes(

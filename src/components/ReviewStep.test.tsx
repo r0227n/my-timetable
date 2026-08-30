@@ -5,6 +5,50 @@ import { createBlankSchedule, createEmptyDocument, type TimetableDocument } from
 import { ReviewStep } from "./ReviewStep";
 
 describe("ReviewStep", () => {
+  it("shows the retained OCR text, order, confidence, and low-confidence field emphasis", () => {
+    const document = {
+      ...createEmptyDocument(),
+      schedules: [
+        createBlankSchedule({
+          id: "low-item",
+          artist: "ALPHA",
+          confidence: "low",
+          sourceRegions: [{ x: 10, y: 20, width: 100, height: 50 }],
+        }),
+      ],
+    };
+
+    const view = render(
+      <ReviewStep
+        document={document}
+        sourceUrl="blob:test-image"
+        ocrResult={{
+          text: "10:00 ALPHA",
+          engine: "glm-ocr",
+          image: { width: 400, height: 300 },
+          regions: [
+            {
+              id: "region-1",
+              kind: "column",
+              text: "10:00 ALPHA",
+              order: 2,
+              confidence: 0.73,
+              region: { x: 0, y: 0, width: 200, height: 100 },
+            },
+          ],
+        }}
+        onChange={vi.fn<(document: TimetableDocument) => void>()}
+        onBack={vi.fn<() => void>()}
+        onNext={vi.fn<() => void>()}
+      />,
+    );
+
+    expect(screen.getByText("10:00 ALPHA")).toBeInTheDocument();
+    expect(view.container.querySelector(".ocr-evidence-item small")).toHaveTextContent("73%");
+    expect(view.container.querySelector(".detail-form")).toHaveClass("low-confidence-fields");
+    expect(view.container.querySelector(".low-confidence-notice")).toBeInTheDocument();
+  });
+
   it("revokes verification only for schedules that inherit a changed event date", () => {
     const inherited = createBlankSchedule({
       id: "inherited",
@@ -33,13 +77,14 @@ describe("ReviewStep", () => {
       <ReviewStep
         document={document}
         sourceUrl={null}
+        ocrResult={null}
         onChange={onChange}
         onBack={vi.fn<() => void>()}
         onNext={vi.fn<() => void>()}
       />,
     );
 
-    fireEvent.change(screen.getByLabelText(/^date$|^日付$/i), { target: { value: "2026-08-31" } });
+    fireEvent.change(screen.getByLabelText(/date|開催日/i), { target: { value: "2026-08-31" } });
 
     const updated = onChange.mock.calls.at(-1)?.[0];
     expect(updated).toBeDefined();
@@ -62,6 +107,7 @@ describe("ReviewStep", () => {
       <ReviewStep
         document={document}
         sourceUrl={null}
+        ocrResult={null}
         onChange={vi.fn<(document: TimetableDocument) => void>()}
         onBack={vi.fn<() => void>()}
         onNext={vi.fn<() => void>()}
@@ -102,6 +148,7 @@ describe("ReviewStep", () => {
       <ReviewStep
         document={document}
         sourceUrl={null}
+        ocrResult={null}
         onChange={onChange}
         onBack={vi.fn<() => void>()}
         onNext={vi.fn<() => void>()}
@@ -113,6 +160,7 @@ describe("ReviewStep", () => {
       <ReviewStep
         document={onChange.mock.calls[0][0]}
         sourceUrl={null}
+        ocrResult={null}
         onChange={onChange}
         onBack={vi.fn<() => void>()}
         onNext={vi.fn<() => void>()}
