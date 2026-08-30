@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import App from "./App";
@@ -128,34 +128,23 @@ describe("Phase 1 manual flow", () => {
     expect(screen.getByLabelText("撮影等の属性")).toBeInTheDocument();
   });
 
-  it("aligns the type and schedule date controls with their table headers in both languages", async () => {
+  it("shows the type and schedule date controls in the detail panel in both languages", async () => {
     const user = userEvent.setup();
     render(<App />);
     await user.click(screen.getByRole("button", { name: "画像を使わず手入力ではじめる" }));
     await screen.findByLabelText("出演者名");
 
-    const expectColumnAlignment = (typeHeader: string, dateHeader: string) => {
-      const table = screen.getByRole("table");
-      const headers = within(table).getAllByRole("columnheader");
-      const cells = within(within(table).getAllByRole("row")[1]).getAllByRole("cell");
-      const typeColumn = headers.findIndex((header) => header.textContent === typeHeader);
-      const dateColumn = headers.findIndex((header) => header.textContent === dateHeader);
-
-      expect(typeColumn).toBeGreaterThanOrEqual(0);
-      expect(dateColumn).toBeGreaterThanOrEqual(0);
-      expect(within(cells[typeColumn]).getByRole("combobox")).toHaveAccessibleName(typeHeader);
-      expect(within(cells[dateColumn]).getByLabelText(/予定日|Schedule date/)).toHaveAttribute(
-        "type",
-        "date",
-      );
+    const expectDetailControls = (typeLabel: string, dateLabel: string) => {
+      expect(screen.getByRole("combobox", { name: typeLabel })).toBeInTheDocument();
+      expect(screen.getByLabelText(dateLabel)).toHaveAttribute("type", "date");
     };
 
-    expectColumnAlignment("種別", "開催日");
+    expectDetailControls("種別", "予定日");
 
     await user.click(screen.getByRole("button", { name: "表示言語: 日本語" }));
     await user.click(screen.getByRole("menuitemradio", { name: "English" }));
     await screen.findByRole("heading", { name: "Review the extracted data" });
-    expectColumnAlignment("Type", "Date");
+    expectDetailControls("Type", "Schedule date");
   });
 
   it("switches language without losing in-progress data", async () => {
