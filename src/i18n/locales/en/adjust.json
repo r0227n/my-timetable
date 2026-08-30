@@ -12,9 +12,18 @@
   "brightness": "Brightness",
   "contrast": "Contrast",
   "crop": "Crop",
-  "top": "Top",
-  "bottom": "Bottom",
-  "left": "Left",
-  "right": "Right",
+  "cropInstructions": "Drag inside the frame to move it, or drag an edge or corner to resize. On this screen, arrow keys move the frame by 1% without selecting it first; hold Shift to move it by 5%.",
+  "cropMove": "Move crop area",
+  "cropHandle": "Adjust crop area {{direction}}",
+  "directions": {
+    "n": "top edge",
+    "ne": "top-right corner",
+    "e": "right edge",
+    "se": "bottom-right corner",
+    "s": "bottom edge",
+    "sw": "bottom-left corner",
+    "w": "left edge",
+    "nw": "top-left corner"
+  },
   "start": "Start analysis"
 }
