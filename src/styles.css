@@ -1357,6 +1357,16 @@ textarea {
   color: var(--muted);
   font-size: 9px;
 }
+
+.export-scale {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.75rem 0;
+}
+
+.export-scale select {
+  min-height: 2.75rem;
+}
 .export-message {
   display: block;
   margin-top: 18px;

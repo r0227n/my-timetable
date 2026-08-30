@@ -7,6 +7,8 @@
   "image": "Image",
   "imageDescription": "Save an editable SVG or a high-resolution PNG.",
   "saveSvg": "Save SVG",
+  "pngScale": "PNG scale",
+  "pngScaleValue": "{{scale}}x",
   "savePng": "Save PNG",
   "pngSaved": "PNG saved.",
   "calendar": "Calendar",

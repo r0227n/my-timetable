@@ -60,6 +60,37 @@ describe("timeline export", () => {
     expect(svg).not.toContain("Artist <A>");
   });
 
+  it("clips and shortens long card text inside the exported image", () => {
+    const longSchedule = createBlankSchedule({
+      id: "long-artist",
+      artist: "A very long artist name that must stay within the schedule card boundary",
+      startTime: "10:00",
+      endTime: "10:30",
+    });
+    const svg = buildTimelineSvg(
+      document,
+      [longSchedule],
+      {
+        width: 320,
+        height: 320,
+        background: "#ffffff",
+        accent: "#df5d3d",
+        title: "Day",
+        layout: "vertical",
+        showDate: false,
+        showVenue: false,
+        showType: true,
+        showStage: true,
+        showBooth: true,
+      },
+      exportLabels,
+    );
+
+    expect(svg).toContain("clip-path=");
+    expect(svg).toContain("…");
+    expect(svg).not.toContain(longSchedule.artist);
+  });
+
   it("creates a calendar with stable event details and excludes untimed schedules", () => {
     const untimed = createBlankSchedule({ id: "untimed", artist: "Later", relativeTimeLabel: "終演後" });
     const ics = buildIcsCalendar(document, [...document.schedules, untimed], scheduleTypeLabels);
