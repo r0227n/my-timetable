@@ -2,6 +2,7 @@ import type { TimetableDocument } from "../domain/timetable";
 import { createOcrEngine, OcrError, type OcrProgress, type OcrResult } from "@my-timetable/glm-ocr-web";
 import { AppError } from "../domain/errors";
 import type { AnalysisUpdate } from "./analysis-contract";
+import type { GemmaModelId } from "./gemma-model";
 
 export type { AnalysisUpdate } from "./analysis-contract";
 
@@ -9,6 +10,7 @@ export async function analyzeTimetable(
   image: Blob,
   onUpdate: (update: AnalysisUpdate) => void,
   signal: AbortSignal,
+  gemmaModel: GemmaModelId = "e2b",
 ): Promise<{ document: TimetableDocument; ocrText: string }> {
   const ocrResult = await recognizeImage(image, (progress) => onUpdate({ step: "ocr", ...progress }), signal);
   const ocrText = ocrResult.text;
@@ -18,6 +20,7 @@ export async function analyzeTimetable(
     ocrResult,
     (progress) => onUpdate({ step: "gemma", ...progress }),
     signal,
+    gemmaModel,
   );
   return { document, ocrText };
 }

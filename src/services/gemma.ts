@@ -7,7 +7,8 @@ import {
   type TimetableDocument,
 } from "../domain/timetable";
 import type { OcrResult } from "@my-timetable/glm-ocr-web";
-import { modelConfig } from "./model-config";
+import { gemmaModels } from "./model-config";
+import type { GemmaModelId } from "./gemma-model";
 import { AppError } from "../domain/errors";
 import { inferMissingEndTimes } from "../domain/infer-end-times";
 
@@ -38,14 +39,16 @@ export async function structureWithGemma(
   ocrResult: OcrResult,
   onProgress: (progress: GemmaProgress) => void,
   signal: AbortSignal,
+  modelId: GemmaModelId = "e2b",
 ): Promise<TimetableDocument> {
   if (signal.aborted) throw new DOMException("解析を中止しました。", "AbortError");
   if (!navigator.gpu) throw new AppError("gemmaWebGpuRequired");
   onProgress({ progress: 0 });
-  const modelStream = await loadModelStream(onProgress, signal);
+  const model = gemmaModels[modelId];
+  const modelStream = await loadModelStream(model, onProgress, signal);
   if (signal.aborted) throw new DOMException("Analysis aborted", "AbortError");
 
-  configureLiteRtWasmAssets(modelConfig.structuring.runtimeUrl);
+  configureLiteRtWasmAssets(model.runtimeUrl);
   const { Engine } = await import("@litert-lm/core");
   const engine = await Engine.create({
     model: modelStream,
@@ -338,10 +341,11 @@ function isSourceRegion(value: unknown): value is { x: number; y: number; width:
 }
 
 async function loadModelStream(
+  model: (typeof gemmaModels)[GemmaModelId],
   onProgress: (progress: GemmaProgress) => void,
   signal: AbortSignal,
 ): Promise<ReadableStream<Uint8Array>> {
-  const { url, cacheName } = modelConfig.structuring;
+  const { url, cacheName } = model;
   const cache = await caches.open(cacheName);
   let response = await cache.match(url);
   if (!response) {

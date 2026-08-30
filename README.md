@@ -6,7 +6,7 @@
 
 - JPEG / PNG / WebP画像のアップロードと20MB上限の検証
 - 回転、切り抜き、明るさ、コントラスト調整、長辺4096pxへの縮小
-- ブラウザ内OCRとGemma 4 E2Bによる構造化
+- ブラウザ内OCRと選択可能なGemma 4 E2B/E4Bによる構造化
 - イベント情報・予定の追加、編集、複製、削除、確認
 - 出演者単位・予定単位の選択、検索、絞り込み
 - 時間重複と移動時間不足の検出
@@ -63,7 +63,7 @@ AIモデルをダウンロードせず、Phase 1の編集・選択機能をす�
 AI解析にはWebGPU対応の最新版ChromeまたはEdgeを推奨します。「解析を開始」を押すと、端末内で次の処理を行います。
 
 1. GLM-OCR ONNXによるブラウザ内文字認識
-2. LiteRT-LM上のGemma 4 E2Bによる予定データの構造化
+2. LiteRT-LM上のGemma 4 E2B/E4Bによる予定データの構造化
 3. 抽出結果確認画面への表示
 
 初回は約750MBのGLM-OCRモデルに加えて約2.01GBのGemmaモデルを取得します。十分な空き容量と安定した回線を用意してください。モデル取得や解析に失敗した場合も、「手入力で続ける」から残りのフローを確認できます。
@@ -151,7 +151,7 @@ hermes profile install ./hermes-profile/docs-review --name my-timetable-docs-rev
 
 OCRは `onnx-community/GLM-OCR-ONNX` のq4グラフをTransformers.js経由のONNX Runtime Web / WebGPUで実行します。モデル選定の検証結果は [`docs/SPEC.md`](docs/SPEC.md) の「Phase 0技術判断」を参照してください。
 
-構造化にはGoogleのLiteRT-LM Web APIと `gemma-4-E2B-it-web.litertlm` を使用します。`@litert-lm/core` の `0.16.0` は2026-08-27時点で配布tarballに実装ファイルが含まれていないため、正常な配布物を含む `0.15.0` に固定しています。初回モデル取得は約2.01GBです。
+構造化にはGoogleのLiteRT-LM Web APIと `gemma-4-E2B-it-web.litertlm`（約2.01GB）を使用します。WebGPU対応かつ端末メモリが8GB以上の場合は、ヘッダーから `gemma-4-E4B-it-web.litertlm`（約2.97GB）も選択できます。`@litert-lm/core` の `0.16.0` は2026-08-27時点で配布tarballに実装ファイルが含まれていないため、正常な配布物を含む `0.15.0` に固定しています。
 
 ## デプロイ
 

@@ -1,10 +1,49 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import App from "./App";
 
 describe("Phase 1 manual flow", () => {
   beforeEach(() => localStorage.clear());
+  afterEach(() => {
+    Reflect.deleteProperty(navigator, "gpu");
+    Reflect.deleteProperty(navigator, "deviceMemory");
+  });
+
+  it("shows the selected model and explains why E4B is unavailable", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "選択中のモデル: Gemma 4 E2B" }));
+    expect(screen.getByRole("menu", { name: "Gemmaモデル" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitemradio", { name: /Gemma 4 E4B/ })).toBeDisabled();
+    expect(screen.getByText("WebGPUに対応していないため利用できません。")).toBeInTheDocument();
+    expect(screen.getByText(/変更は次回の解析開始時から反映/)).toBeInTheDocument();
+  });
+
+  it("persists an E2B fallback when a stored E4B selection is no longer available", async () => {
+    localStorage.setItem("ui.gemmaModel", "e4b");
+    render(<App />);
+
+    expect(screen.getByRole("button", { name: "選択中のモデル: Gemma 4 E2B" })).toBeInTheDocument();
+    await waitFor(() => expect(localStorage.getItem("ui.gemmaModel")).toBe("e2b"));
+  });
+
+  it("selects and restores E4B on a capable device", async () => {
+    Object.defineProperty(navigator, "gpu", { configurable: true, value: {} });
+    Object.defineProperty(navigator, "deviceMemory", { configurable: true, value: 8 });
+    const user = userEvent.setup();
+    const view = render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "選択中のモデル: Gemma 4 E2B" }));
+    await user.click(screen.getByRole("menuitemradio", { name: /Gemma 4 E4B/ }));
+    expect(screen.getByRole("button", { name: "選択中のモデル: Gemma 4 E4B" })).toHaveFocus();
+    expect(localStorage.getItem("ui.gemmaModel")).toBe("e4b");
+
+    view.unmount();
+    render(<App />);
+    expect(screen.getByRole("button", { name: "選択中のモデル: Gemma 4 E4B" })).toBeInTheDocument();
+  });
 
   it("allows manual editing and schedule selection without WebGPU", async () => {
     const user = userEvent.setup();

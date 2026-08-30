@@ -204,12 +204,15 @@ describe("structureWithGemma", () => {
         }
       },
     );
+    const cacheMatch = vi.fn<() => Promise<Response>>(
+      async () =>
+        new Response(new Uint8Array([1, 2, 3]), {
+          headers: { "content-length": "3" },
+        }),
+    );
     vi.stubGlobal("caches", {
       open: async () => ({
-        match: async () =>
-          new Response(new Uint8Array([1, 2, 3]), {
-            headers: { "content-length": "3" },
-          }),
+        match: cacheMatch,
       }),
     });
 
@@ -217,12 +220,16 @@ describe("structureWithGemma", () => {
       { engine: "glm-ocr", image: { width: 1, height: 1 }, text: "Artist 10:00", regions: [] },
       vi.fn(),
       new AbortController().signal,
+      "e4b",
     );
 
     expect(events).toEqual([
       "https://cdn.jsdelivr.net/npm/@litert-lm/core@0.15.0/wasm/litertlm_wasm_asyncify_internal.wasm",
     ]);
     expect(createEngine).toHaveBeenCalledOnce();
+    expect(cacheMatch).toHaveBeenCalledWith(
+      "https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm/resolve/main/gemma-4-E4B-it-web.litertlm",
+    );
     expect(sendMessage).toHaveBeenCalledOnce();
     expect(deleteConversation).toHaveBeenCalledOnce();
     expect(deleteEngine).toHaveBeenCalledOnce();

@@ -188,10 +188,12 @@ button:disabled {
 .debug-error {
   color: var(--accent-dark);
 }
-.language-menu {
+.language-menu,
+.model-menu {
   position: relative;
 }
-.language-button {
+.language-button,
+.model-button {
   height: 38px;
   padding: 0 13px;
   border: 1px solid var(--line);
@@ -205,6 +207,58 @@ button:disabled {
   display: inline-flex;
   align-items: center;
   gap: 7px;
+}
+.model-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(320px, calc(100vw - 24px));
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+.model-option + .model-option {
+  margin-top: 4px;
+}
+.model-option > button {
+  width: 100%;
+  min-height: 48px;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-align: left;
+}
+.model-option > button:not(:disabled):hover {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+.model-option > button span {
+  display: grid;
+  gap: 2px;
+}
+.model-option small {
+  color: var(--ink);
+  font-size: 11px;
+}
+.model-unavailable {
+  display: block;
+  padding: 0 9px 7px;
+  line-height: 1.4;
+}
+.model-change-note {
+  margin: 8px 4px 2px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+  color: var(--ink);
+  font-size: 11px;
+  line-height: 1.5;
 }
 .language-dropdown {
   position: absolute;
@@ -1420,6 +1474,18 @@ textarea {
     width: 38px;
     padding: 0;
     justify-content: center;
+  }
+  .brand > span:last-child,
+  .language-button > span,
+  .model-button > svg:first-child {
+    display: none;
+  }
+  .model-button,
+  .language-button {
+    padding: 0 9px;
+  }
+  .model-button > span {
+    font-size: 11px;
   }
   .debug-grid {
     grid-template-columns: 1fr;

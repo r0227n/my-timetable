@@ -3,15 +3,28 @@ import { Bug, CalendarDays, Check, ChevronDown, DatabaseZap, Languages, Moon, Su
 import { useTranslation } from "react-i18next";
 import { changeUiLanguage, currentLanguage } from "../i18n/i18n";
 import { supportedLanguages } from "../i18n/config";
+import type { GemmaModelAvailability, GemmaModelId } from "../services/gemma-model";
+import { GemmaModelSelector } from "./GemmaModelSelector";
 
 interface AppHeaderProps {
   dark: boolean;
   onToggleTheme: () => void;
   onClearModelCache: () => Promise<void>;
+  gemmaModel: GemmaModelId;
+  e4bAvailability: GemmaModelAvailability;
+  onGemmaModelChange: (model: GemmaModelId) => void;
   onOpenDebug?: () => void;
 }
 
-export function AppHeader({ dark, onToggleTheme, onClearModelCache, onOpenDebug }: AppHeaderProps) {
+export function AppHeader({
+  dark,
+  onToggleTheme,
+  onClearModelCache,
+  gemmaModel,
+  e4bAvailability,
+  onGemmaModelChange,
+  onOpenDebug,
+}: AppHeaderProps) {
   const { t } = useTranslation("common");
   const language = currentLanguage();
   const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
@@ -45,6 +58,11 @@ export function AppHeader({ dark, onToggleTheme, onClearModelCache, onOpenDebug 
         <span>MY TIMETABLE</span>
       </a>
       <div className="header-actions">
+        <GemmaModelSelector
+          selected={gemmaModel}
+          e4bAvailability={e4bAvailability}
+          onChange={onGemmaModelChange}
+        />
         {onOpenDebug ? (
           <button className="debug-button" type="button" onClick={onOpenDebug}>
             <Bug size={17} aria-hidden="true" />
