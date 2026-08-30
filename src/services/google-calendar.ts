@@ -5,6 +5,7 @@ import {
   type ScheduleType,
   type TimetableDocument,
 } from "../domain/timetable";
+import { isCalendarScheduleExportable } from "../domain/export";
 
 export interface GoogleCalendarEvent {
   summary: string;
@@ -113,13 +114,7 @@ export function isCalendarScheduleRegisterable(
   schedule: ScheduleItem,
   document?: TimetableDocument,
 ): schedule is ScheduleItem & { startTime: string; endTime: string } {
-  return Boolean(
-    (!document || resolveScheduleDate(document, schedule)) &&
-    schedule.startTime &&
-    schedule.endTime &&
-    (["explicit", "manual"].includes(schedule.endTimeSource) || schedule.verified) &&
-    (schedule.endsNextDay || schedule.endTime > schedule.startTime),
-  );
+  return isCalendarScheduleExportable(schedule, document);
 }
 
 function addDays(date: string, days: number): string {

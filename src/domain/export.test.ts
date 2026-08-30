@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { createBlankSchedule, createEmptyDocument } from "./timetable";
-import { buildIcsCalendar, buildTimelineSvg, createExportFileName } from "./export";
+import {
+  buildIcsCalendar,
+  buildTimelineSvg,
+  createExportFileName,
+  isCalendarScheduleExportable,
+} from "./export";
 
 const scheduleTypeLabels = { live: "LIVE", meet_and_greet: "Meet & Greet", merch: "Merch", other: "Other" };
 const exportLabels = {
@@ -66,7 +71,13 @@ describe("timeline export", () => {
 
     expect(ics).toContain("DTSTART;TZID=Asia/Tokyo:20260827T100000");
     expect(ics).toContain("DTEND;TZID=Asia/Tokyo:20260827T103000");
+    expect(ics).toMatch(/DTSTAMP:\d{8}T\d{6}Z/);
+    expect(ics).toContain("CALSCALE:GREGORIAN");
+    expect(ics).toContain("X-WR-TIMEZONE:Asia/Tokyo");
     expect(ics).toContain("SUMMARY:Artist <A> - LIVE");
+    expect(ics).toContain("LOCATION:Stage 1");
+    expect(ics).toContain("DESCRIPTION:Example / Festival\\nLIVE\\nBring water");
+    expect(ics).toMatch(/UID:[0-9a-f]+@my-timetable/);
     expect(ics).not.toContain("Later");
   });
 
@@ -127,6 +138,22 @@ describe("timeline export", () => {
     expect(buildIcsCalendar(document, [{ ...inferred, verified: true }], scheduleTypeLabels)).toContain(
       "BEGIN:VEVENT",
     );
+  });
+
+  it("classifies missing and unconfirmed schedules as initially excluded", () => {
+    const missingDate = { ...document, event: { ...document.event, date: null } };
+    const missingTime = createBlankSchedule({ startTime: null, endTime: "10:30" });
+    const inferred = createBlankSchedule({
+      date: "2026-08-30",
+      startTime: "10:00",
+      endTime: "10:30",
+      endTimeSource: "inferred_default",
+      verified: false,
+    });
+
+    expect(isCalendarScheduleExportable(missingTime, document)).toBe(false);
+    expect(isCalendarScheduleExportable(inferred, missingDate)).toBe(false);
+    expect(isCalendarScheduleExportable({ ...inferred, verified: true }, missingDate)).toBe(true);
   });
 
   it("positions timed cards on a constant time scale and separates simultaneous schedules", () => {

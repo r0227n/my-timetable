@@ -93,6 +93,7 @@ export function buildIcsCalendar(
     return [
       "BEGIN:VEVENT",
       `UID:${stableUid(document, schedule)}`,
+      `DTSTAMP:${formatUtcTimestamp(new Date())}`,
       `DTSTART;TZID=${escapeIcs(document.event.timezone)}:${start}`,
       `DTEND;TZID=${escapeIcs(document.event.timezone)}:${end}`,
       `SUMMARY:${escapeIcs(`${schedule.artist} - ${scheduleTypeLabels[schedule.type]}`)}`,
@@ -104,11 +105,33 @@ export function buildIcsCalendar(
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
+    "CALSCALE:GREGORIAN",
     "PRODID:-//My Timetable//NONSGML v1.0//EN",
+    `X-WR-TIMEZONE:${escapeIcs(document.event.timezone)}`,
     ...events,
     "END:VCALENDAR",
   ];
   return `${lines.map(foldIcsLine).join("\r\n")}\r\n`;
+}
+
+export function isCalendarScheduleExportable(
+  schedule: ScheduleItem,
+  document?: TimetableDocument,
+): schedule is ScheduleItem & { startTime: string; endTime: string } {
+  return Boolean(
+    (!document || resolveScheduleDate(document, schedule)) &&
+    schedule.startTime &&
+    schedule.endTime &&
+    (["explicit", "manual"].includes(schedule.endTimeSource) || schedule.verified) &&
+    (schedule.endsNextDay || schedule.endTime > schedule.startTime),
+  );
+}
+
+function formatUtcTimestamp(value: Date): string {
+  return value
+    .toISOString()
+    .replace(/[-:]/g, "")
+    .replace(/\.\d{3}Z$/, "Z");
 }
 
 export function createExportFileName(document: TimetableDocument): string {
