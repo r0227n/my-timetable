@@ -228,14 +228,6 @@ export function ReviewStep({ document, sourceUrl, onChange, onBack, onNext }: Re
                       ) : null}
                     </td>
                     <td>
-                      <input
-                        aria-label={t("scheduleDate")}
-                        type="date"
-                        value={item.date ?? ""}
-                        onChange={(e) => updateSchedule(item.id, { date: e.target.value || null })}
-                      />
-                    </td>
-                    <td>
                       <select
                         aria-label={t("type")}
                         value={item.type}
@@ -249,6 +241,14 @@ export function ReviewStep({ document, sourceUrl, onChange, onBack, onNext }: Re
                           </option>
                         ))}
                       </select>
+                    </td>
+                    <td>
+                      <input
+                        aria-label={t("scheduleDate")}
+                        type="date"
+                        value={item.date ?? ""}
+                        onChange={(e) => updateSchedule(item.id, { date: e.target.value || null })}
+                      />
                     </td>
                     <td>
                       <input
