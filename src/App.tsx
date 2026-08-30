@@ -78,6 +78,9 @@ export default function App() {
     localStorage.setItem("ui.theme", dark ? "dark" : "light");
   }, [dark]);
   useEffect(() => storeGemmaModel(gemmaModel), [gemmaModel]);
+  useEffect(() => {
+    if (step > 0) document.querySelector<HTMLElement>("#main-content")?.focus();
+  }, [step]);
   useEffect(
     () => () => {
       if (sourceUrlRef.current) URL.revokeObjectURL(sourceUrlRef.current);
@@ -135,6 +138,16 @@ export default function App() {
 
   return (
     <div className="app-frame">
+      <a
+        className="skip-link"
+        href="#main-content"
+        onClick={(event) => {
+          event.preventDefault();
+          document.querySelector<HTMLElement>("#main-content")?.focus();
+        }}
+      >
+        {t("skipToContent")}
+      </a>
       <AppHeader
         dark={dark}
         onToggleTheme={() => setDark((value) => !value)}
@@ -157,77 +170,79 @@ export default function App() {
         </Suspense>
       ) : null}
       <StepNav current={step} />
-      {step === 0 ? (
-        <UploadStep
-          webGpu={webGpu}
-          gemmaModel={gemmaModel}
-          onFile={(nextFile) => {
-            replaceObjectUrl(sourceUrlRef, nextFile, setSourceUrl);
-            replaceObjectUrl(analysisImageUrlRef, null, setAnalysisImageUrl);
-            setAdjustments(defaultAdjustments);
-            setStep(1);
-          }}
-          onManual={manual}
-        />
-      ) : null}
-      {step === 1 && sourceUrl ? (
-        <AdjustStep
-          sourceUrl={sourceUrl}
-          adjustments={adjustments}
-          onChange={setAdjustments}
-          onBack={() => setStep(0)}
-          onAnalyze={() => void startAnalysis()}
-        />
-      ) : null}
-      {step === 2 ? (
-        <AnalysisStep
-          stage={analysis.stage}
-          progress={analysis.progress}
-          error={analysis.error ? localizeError(analysis.error, "analysisFailed") : null}
-          onCancel={() => controller.current?.abort()}
-          onManual={manual}
-          onRetry={() => void startAnalysis()}
-        />
-      ) : null}
-      {step === 3 ? (
-        <ReviewStep
-          document={timetable}
-          sourceUrl={analysisImageUrl ?? sourceUrl}
-          onChange={setTimetable}
-          onBack={() => setStep(sourceUrl ? 1 : 0)}
-          onNext={() => {
-            setSelected(new Set(selectableSchedules(timetable).map((item) => item.id)));
-            setStep(4);
-          }}
-        />
-      ) : null}
-      {step === 4 ? (
-        <SelectionStep
-          document={{ ...timetable, schedules: selectableSchedules(timetable) }}
-          selected={selected}
-          onSelectedChange={setSelected}
-          onBack={() => setStep(3)}
-          onNext={() => setStep(5)}
-        />
-      ) : null}
-      {step === 5 ? (
-        <TimelineStep
-          document={timetable}
-          schedules={timetable.schedules.filter((item) => selected.has(item.id))}
-          options={timelineOptions}
-          onChange={setTimelineOptions}
-          onBack={() => setStep(4)}
-          onNext={() => setStep(6)}
-        />
-      ) : null}
-      {step === 6 ? (
-        <ExportStep
-          document={timetable}
-          schedules={timetable.schedules.filter((item) => selected.has(item.id))}
-          options={timelineOptions}
-          onBack={() => setStep(5)}
-        />
-      ) : null}
+      <div id="main-content" className="step-content" tabIndex={-1}>
+        {step === 0 ? (
+          <UploadStep
+            webGpu={webGpu}
+            gemmaModel={gemmaModel}
+            onFile={(nextFile) => {
+              replaceObjectUrl(sourceUrlRef, nextFile, setSourceUrl);
+              replaceObjectUrl(analysisImageUrlRef, null, setAnalysisImageUrl);
+              setAdjustments(defaultAdjustments);
+              setStep(1);
+            }}
+            onManual={manual}
+          />
+        ) : null}
+        {step === 1 && sourceUrl ? (
+          <AdjustStep
+            sourceUrl={sourceUrl}
+            adjustments={adjustments}
+            onChange={setAdjustments}
+            onBack={() => setStep(0)}
+            onAnalyze={() => void startAnalysis()}
+          />
+        ) : null}
+        {step === 2 ? (
+          <AnalysisStep
+            stage={analysis.stage}
+            progress={analysis.progress}
+            error={analysis.error ? localizeError(analysis.error, "analysisFailed") : null}
+            onCancel={() => controller.current?.abort()}
+            onManual={manual}
+            onRetry={() => void startAnalysis()}
+          />
+        ) : null}
+        {step === 3 ? (
+          <ReviewStep
+            document={timetable}
+            sourceUrl={analysisImageUrl ?? sourceUrl}
+            onChange={setTimetable}
+            onBack={() => setStep(sourceUrl ? 1 : 0)}
+            onNext={() => {
+              setSelected(new Set(selectableSchedules(timetable).map((item) => item.id)));
+              setStep(4);
+            }}
+          />
+        ) : null}
+        {step === 4 ? (
+          <SelectionStep
+            document={{ ...timetable, schedules: selectableSchedules(timetable) }}
+            selected={selected}
+            onSelectedChange={setSelected}
+            onBack={() => setStep(3)}
+            onNext={() => setStep(5)}
+          />
+        ) : null}
+        {step === 5 ? (
+          <TimelineStep
+            document={timetable}
+            schedules={timetable.schedules.filter((item) => selected.has(item.id))}
+            options={timelineOptions}
+            onChange={setTimelineOptions}
+            onBack={() => setStep(4)}
+            onNext={() => setStep(6)}
+          />
+        ) : null}
+        {step === 6 ? (
+          <ExportStep
+            document={timetable}
+            schedules={timetable.schedules.filter((item) => selected.has(item.id))}
+            options={timelineOptions}
+            onBack={() => setStep(5)}
+          />
+        ) : null}
+      </div>
       <footer className="app-footer">
         <span>MY TIMETABLE · MVP</span>
         <span>{t("footer")}</span>

@@ -34,14 +34,13 @@ export function AnalysisStep({ stage, progress, error, onCancel, onManual, onRet
         </div>
         <span className="eyebrow">03 / ANALYZE</span>
         <h1>{error ? t("failedHeading") : t("heading")}</h1>
-        <output className="analysis-message">{message}</output>
+        <output className="analysis-message" aria-live="polite" aria-atomic="true">
+          {message}
+        </output>
         {!error ? (
           <>
             <div className="progress-track">
-              <span
-                style={{ width: `${progress === null ? 35 : Math.max(4, progress * 100)}%` }}
-                className={progress === null ? "indeterminate" : ""}
-              />
+              <progress aria-label={message} max={1} value={progress ?? undefined} />
             </div>
             <div className="analysis-steps">
               {steps.map((key, index) => (
