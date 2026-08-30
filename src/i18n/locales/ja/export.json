@@ -7,6 +7,8 @@
   "image": "画像",
   "imageDescription": "編集可能なSVG、または高解像度PNGとして保存します。",
   "saveSvg": "SVGを保存",
+  "pngScale": "PNG倍率",
+  "pngScaleValue": "{{scale}}倍",
   "savePng": "PNGを保存",
   "pngSaved": "PNGを保存しました。",
   "calendar": "カレンダー",

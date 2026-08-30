@@ -38,6 +38,7 @@ export function ExportStep({ document, schedules, options, onBack }: ExportStepP
   const labels = useExportLabels();
   const language = currentLanguage();
   const [message, setMessage] = useState<ExportMessage | null>(null);
+  const [pngScale, setPngScale] = useState(2);
   const [googleState, setGoogleState] = useState<"idle" | "confirm" | "working">("idle");
   const [googleResults, setGoogleResults] = useState<CalendarRegistrationResult[]>([]);
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
@@ -128,11 +129,21 @@ export function ExportStep({ document, schedules, options, onBack }: ExportStepP
           >
             {t("saveSvg")}
           </button>
+          <label className="export-scale">
+            <span>{t("pngScale")}</span>
+            <select value={pngScale} onChange={(event) => setPngScale(Number(event.target.value))}>
+              {[1, 2, 3, 4].map((scale) => (
+                <option key={scale} value={scale}>
+                  {t("pngScaleValue", { scale })}
+                </option>
+              ))}
+            </select>
+          </label>
           <button
             className="ghost-button"
             type="button"
             onClick={() =>
-              void svgToPngBlob(svg, options.width, options.height)
+              void svgToPngBlob(svg, options.width, options.height, pngScale)
                 .then((blob) => {
                   downloadBlob(blob, `${fileName}.png`);
                   setMessage({ type: "translation", key: "pngSaved" });

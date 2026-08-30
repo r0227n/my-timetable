@@ -313,17 +313,40 @@ function renderTimelineCard(
     merch: "#3c8b70",
     other: "#777777",
   };
+  const clipId = `card-${stableTextHash(schedule.id)}`;
+  const primaryText = `${schedule.startTime ?? schedule.relativeTimeLabel ?? labels.unsetTime} ${schedule.artist}`;
+  const details = scheduleDetails(schedule, options, labels.scheduleTypes);
+  const textWidth = Math.max(0, width - (conflicting ? 58 : 32));
   return [
     `<g data-schedule-id="${escapeXml(schedule.id)}">`,
+    `<defs><clipPath id="${clipId}"><rect x="${(x + 12).toFixed(1)}" y="${(y + 4).toFixed(1)}" width="${Math.max(0, width - 24).toFixed(1)}" height="${Math.max(0, height - 8).toFixed(1)}"/></clipPath></defs>`,
     `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${width.toFixed(1)}" height="${height.toFixed(1)}" rx="10" fill="#fcfaf5" stroke="#d8d2c5"/>`,
     `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="7" height="${height.toFixed(1)}" rx="3" fill="${escapeXml(typeColors[schedule.type])}"/>`,
-    `<text x="${(x + 18).toFixed(1)}" y="${(y + 23).toFixed(1)}" font-family="system-ui, sans-serif" font-size="15" font-weight="700" fill="#252722">${escapeXml(`${schedule.startTime ?? schedule.relativeTimeLabel ?? labels.unsetTime} ${schedule.artist}`)}</text>`,
-    `<text x="${(x + 18).toFixed(1)}" y="${(y + 43).toFixed(1)}" font-family="system-ui, sans-serif" font-size="11" fill="#73756d">${escapeXml(scheduleDetails(schedule, options, labels.scheduleTypes))}</text>`,
+    `<g clip-path="url(#${clipId})">`,
+    `<text x="${(x + 18).toFixed(1)}" y="${(y + 23).toFixed(1)}" font-family="system-ui, sans-serif" font-size="15" font-weight="700" fill="#252722">${escapeXml(truncateSvgText(primaryText, textWidth, 15))}</text>`,
+    `<text x="${(x + 18).toFixed(1)}" y="${(y + 43).toFixed(1)}" font-family="system-ui, sans-serif" font-size="11" fill="#73756d">${escapeXml(truncateSvgText(details, Math.max(0, width - 32), 11))}</text>`,
+    `</g>`,
     conflicting
       ? `<text x="${(x + width - 24).toFixed(1)}" y="${(y + 23).toFixed(1)}" font-size="16" aria-label="${escapeXml(labels.conflict)}">⚠</text>`
       : "",
     `</g>`,
   ].join("");
+}
+
+function truncateSvgText(value: string, availableWidth: number, fontSize: number): string {
+  const maxUnits = Math.max(1, Math.floor(availableWidth / (fontSize * 0.58)));
+  const characters = [...value];
+  if (characters.length <= maxUnits) return value;
+  return `${characters.slice(0, Math.max(1, maxUnits - 1)).join("")}…`;
+}
+
+function stableTextHash(value: string): string {
+  let hash = 2_166_136_261;
+  for (const character of value) {
+    hash ^= character.codePointAt(0) ?? 0;
+    hash = Math.imul(hash, 16_777_619);
+  }
+  return (hash >>> 0).toString(16);
 }
 
 function timeToMinutes(value: string | null): number | null {
