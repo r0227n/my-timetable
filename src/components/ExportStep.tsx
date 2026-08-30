@@ -4,13 +4,13 @@ import {
   buildIcsCalendar,
   buildTimelineSvg,
   createExportFileName,
+  isCalendarScheduleExportable,
   type TimelineOptions,
 } from "../domain/export";
 import type { ScheduleItem, TimetableDocument } from "../domain/timetable";
 import { downloadBlob, svgToPngBlob } from "../lib/download";
 import {
   createBrowserGoogleCalendarAdapter,
-  isCalendarScheduleRegisterable,
   registerSchedulesWithGoogleCalendar,
   selectFailedCalendarSchedules,
   type CalendarRegistrationResult,
@@ -50,8 +50,9 @@ export function ExportStep({ document, schedules, options, onBack }: ExportStepP
     (schedule) => schedule.confidence === "low" && !schedule.verified,
   );
   const registerableSchedules = schedules.filter((schedule) =>
-    isCalendarScheduleRegisterable(schedule, document),
+    isCalendarScheduleExportable(schedule, document),
   );
+  const excludedCalendarCount = schedules.length - registerableSchedules.length;
   const hasMissingDates = schedules.some((schedule) => !schedule.date && !document.event.date);
   const failedSchedules = selectFailedCalendarSchedules(schedules, googleResults);
   const saveIcs = () => {
@@ -145,6 +146,20 @@ export function ExportStep({ document, schedules, options, onBack }: ExportStepP
         <article className="panel export-card">
           <h2>{t("calendar")}</h2>
           <p>{t("calendarDescription")}</p>
+          <p>
+            {t("icsEligibleCount", {
+              count: registerableSchedules.length,
+              formattedCount: formatNumber(registerableSchedules.length, language),
+            })}
+          </p>
+          {excludedCalendarCount ? (
+            <p className="export-warning">
+              {t("icsExcludedCount", {
+                count: excludedCalendarCount,
+                formattedCount: formatNumber(excludedCalendarCount, language),
+              })}
+            </p>
+          ) : null}
           {hasMissingDates ? <p className="form-error">{t("icsDateRequired")}</p> : null}
           <button
             className="primary-button"
