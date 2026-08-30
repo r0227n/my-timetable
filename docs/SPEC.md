@@ -262,10 +262,10 @@ type Confidence = "high" | "medium" | "low";
 type ScheduleType = "live" | "meet_and_greet" | "merch" | "other";
 
 interface TimetableDocument {
-  schemaVersion: 1;
+  schemaVersion: 2;
   event: {
     name: string;
-    date: string | null;       // YYYY-MM-DD
+    date: string | null;       // 全項目へ適用する既定日。YYYY-MM-DD
     timezone: string;          // 例: Asia/Tokyo
     venue: string | null;
     openTime: string | null;   // HH:mm
@@ -279,8 +279,10 @@ interface ScheduleItem {
   id: string;
   artist: string;
   type: ScheduleType;
+  date: string | null;               // 複数日画像では項目ごとの開催日。YYYY-MM-DD
   startTime: string | null;
   endTime: string | null;
+  endTimeSource: "explicit" | "manual" | "inferred_next_start" | "inferred_default" | "missing";
   endsNextDay: boolean;              // 終了時刻をイベント翌日として扱う
   relativeTimeLabel: string | null;
   stage: string | null;
@@ -297,11 +299,18 @@ interface ScheduleItem {
 }
 ```
 
+- 1枚に複数日が含まれる場合は `ScheduleItem.date` を使い、各列・各枠を画像内の日付へ対応付ける。
+- 画像内の年表記と月日表記が別領域にあっても、同一イベントの明示情報として対応が取れる場合は組み合わせてよい。画像内に年がない場合は推測せず、ユーザー入力を求める。
+- ステージ見出しが親子構造の場合は `親 / 子` の順で保持する。名称の大文字小文字、記号、空白は可能な限り画像表記を維持し、モデル知識から正式名称を補完しない。
+- 時刻と名称を持つ独立枠はライブ以外も `other` として抽出する。開場・開演はイベントメタデータとして扱い、出演枠にはしない。
+- 終了時刻が明記されている場合は `explicit` とする。欠けている場合、同一日・同一ステージの次枠が60分以内なら次枠開始を候補とし、それ以外は開始60分後、最終枠は開始30分後を候補にする。候補は確定情報ではなく、ユーザーが個別確認するまでCalendar登録対象外とする。
+
 ### 7.5 検証ルール
 
 - 時刻は24時間表記の `HH:mm` に正規化する。
 - 終了時刻が開始時刻以前の場合は警告する。ただし日付またぎをユーザーが指定した場合を除く。
-- 開始時刻または終了時刻がない予定は、カレンダー登録対象から初期状態で除外する。
+- 開催日、開始時刻、終了時刻のいずれかがない予定は、カレンダー登録対象から初期状態で除外する。
+- 推定終了時刻を持つ予定は、ユーザーが個別確認するまでカレンダー登録対象から除外する。
 - `low` の項目はユーザーが確認するまでエクスポート時に警告する。
 - 同一出演者、同一種別、同一時間の重複行を検出する。
 - AI出力に含まれる未知のHTMLやMarkdownを描画しない。

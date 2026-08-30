@@ -17,10 +17,13 @@ export interface OcrProgress {
 export interface OcrResult {
   text: string;
   engine: OcrEngineKind;
+  image: { width: number; height: number };
   regions: OcrTextRegion[];
 }
 
 export interface OcrTextRegion {
+  id: string;
+  kind: "overview" | "header" | "column";
   text: string;
   order: number;
   confidence: number | null;

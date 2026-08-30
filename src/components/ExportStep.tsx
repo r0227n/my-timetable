@@ -49,7 +49,10 @@ export function ExportStep({ document, schedules, options, onBack }: ExportStepP
   const unverifiedLowConfidence = schedules.filter(
     (schedule) => schedule.confidence === "low" && !schedule.verified,
   );
-  const registerableSchedules = schedules.filter(isCalendarScheduleRegisterable);
+  const registerableSchedules = schedules.filter((schedule) =>
+    isCalendarScheduleRegisterable(schedule, document),
+  );
+  const hasMissingDates = schedules.some((schedule) => !schedule.date && !document.event.date);
   const failedSchedules = selectFailedCalendarSchedules(schedules, googleResults);
   const saveIcs = () => {
     try {
@@ -142,8 +145,13 @@ export function ExportStep({ document, schedules, options, onBack }: ExportStepP
         <article className="panel export-card">
           <h2>{t("calendar")}</h2>
           <p>{t("calendarDescription")}</p>
-          {!document.event.date ? <p className="form-error">{t("icsDateRequired")}</p> : null}
-          <button className="primary-button" type="button" disabled={!document.event.date} onClick={saveIcs}>
+          {hasMissingDates ? <p className="form-error">{t("icsDateRequired")}</p> : null}
+          <button
+            className="primary-button"
+            type="button"
+            disabled={!registerableSchedules.length}
+            onClick={saveIcs}
+          >
             {t("saveIcs")}
           </button>
         </article>
@@ -153,12 +161,7 @@ export function ExportStep({ document, schedules, options, onBack }: ExportStepP
           <button
             className="ghost-button"
             type="button"
-            disabled={
-              !googleClientId ||
-              !document.event.date ||
-              !registerableSchedules.length ||
-              googleState === "working"
-            }
+            disabled={!googleClientId || !registerableSchedules.length || googleState === "working"}
             onClick={() => setGoogleState("confirm")}
           >
             {t("registerGoogle")}

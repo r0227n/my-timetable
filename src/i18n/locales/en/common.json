@@ -7,6 +7,7 @@
     "en": "English"
   },
   "header": {
+    "debug": "Debug",
     "clearCache": "Clear AI model cache",
     "cacheCleared": "The AI model cache was cleared.",
     "cacheClearFailed": "The AI model cache could not be cleared.",

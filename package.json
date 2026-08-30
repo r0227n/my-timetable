@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "debug": "vite --mode debug",
     "build": "tsc -b && vite build",
     "test": "vitest run",
     "test:watch": "vitest",

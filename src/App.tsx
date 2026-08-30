@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { AppHeader } from "./components/AppHeader";
 import { StepNav } from "./components/StepNav";
 import { UploadStep } from "./components/UploadStep";
@@ -42,6 +42,11 @@ const initialTimelineOptions: TimelineOptions = {
   showBooth: true,
 };
 
+const DebugPanel =
+  import.meta.env.MODE === "debug"
+    ? lazy(() => import("./components/DebugPanel").then((module) => ({ default: module.DebugPanel })))
+    : null;
+
 export default function App() {
   const { t } = useTranslation(["common", "analysis"]);
   const [step, setStep] = useState(0);
@@ -56,6 +61,7 @@ export default function App() {
   const [analysis, setAnalysis] = useState<AnalysisState>(initialAnalysis);
   const controller = useRef<AbortController | null>(null);
   const [dark, setDark] = useState(() => localStorage.getItem("ui.theme") === "dark");
+  const [debugOpen, setDebugOpen] = useState(false);
   const webGpu = Boolean(navigator.gpu);
 
   useEffect(() => {
@@ -122,6 +128,7 @@ export default function App() {
       <AppHeader
         dark={dark}
         onToggleTheme={() => setDark((value) => !value)}
+        onOpenDebug={DebugPanel ? () => setDebugOpen(true) : undefined}
         onClearModelCache={async () => {
           try {
             await clearAllModelCaches();
@@ -131,6 +138,11 @@ export default function App() {
           }
         }}
       />
+      {DebugPanel && debugOpen ? (
+        <Suspense fallback={null}>
+          <DebugPanel onClose={() => setDebugOpen(false)} />
+        </Suspense>
+      ) : null}
       <StepNav current={step} />
       {step === 0 ? (
         <UploadStep

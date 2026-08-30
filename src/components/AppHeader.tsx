@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { CalendarDays, Check, ChevronDown, DatabaseZap, Languages, Moon, Sun } from "lucide-react";
+import { Bug, CalendarDays, Check, ChevronDown, DatabaseZap, Languages, Moon, Sun } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { changeUiLanguage, currentLanguage } from "../i18n/i18n";
 import { supportedLanguages } from "../i18n/config";
@@ -8,9 +8,10 @@ interface AppHeaderProps {
   dark: boolean;
   onToggleTheme: () => void;
   onClearModelCache: () => Promise<void>;
+  onOpenDebug?: () => void;
 }
 
-export function AppHeader({ dark, onToggleTheme, onClearModelCache }: AppHeaderProps) {
+export function AppHeader({ dark, onToggleTheme, onClearModelCache, onOpenDebug }: AppHeaderProps) {
   const { t } = useTranslation("common");
   const language = currentLanguage();
   const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
@@ -44,6 +45,12 @@ export function AppHeader({ dark, onToggleTheme, onClearModelCache }: AppHeaderP
         <span>MY TIMETABLE</span>
       </a>
       <div className="header-actions">
+        {onOpenDebug ? (
+          <button className="debug-button" type="button" onClick={onOpenDebug}>
+            <Bug size={17} aria-hidden="true" />
+            <span>{t("header.debug")}</span>
+          </button>
+        ) : null}
         <div className="language-menu" ref={languageMenuRef}>
           <button
             ref={languageButtonRef}

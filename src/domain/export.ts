@@ -1,5 +1,9 @@
-import { AppError } from "./errors";
-import type { ScheduleItem, ScheduleType, TimetableDocument } from "./timetable";
+import {
+  resolveScheduleDate,
+  type ScheduleItem,
+  type ScheduleType,
+  type TimetableDocument,
+} from "./timetable";
 
 export interface TimelineOptions {
   width: number;
@@ -68,18 +72,18 @@ export function buildIcsCalendar(
   schedules: ScheduleItem[],
   scheduleTypeLabels: Record<ScheduleType, string>,
 ): string {
-  if (!document.event.date) throw new AppError("icsDateRequired");
   const events = schedules.flatMap((schedule) => {
+    const resolvedDate = resolveScheduleDate(document, schedule);
     if (
+      !resolvedDate ||
       !schedule.startTime ||
       !schedule.endTime ||
+      (!["explicit", "manual"].includes(schedule.endTimeSource) && !schedule.verified) ||
       (!schedule.endsNextDay && schedule.endTime <= schedule.startTime)
     )
       return [];
-    const date = document.event.date!.replaceAll("-", "");
-    const endDate = (
-      schedule.endsNextDay ? addDays(document.event.date!, 1) : document.event.date!
-    ).replaceAll("-", "");
+    const date = resolvedDate.replaceAll("-", "");
+    const endDate = (schedule.endsNextDay ? addDays(resolvedDate, 1) : resolvedDate).replaceAll("-", "");
     const start = `${date}T${schedule.startTime.replace(":", "")}00`;
     const end = `${endDate}T${schedule.endTime.replace(":", "")}00`;
     const location = schedule.stage ?? schedule.booth ?? document.event.venue ?? "";
@@ -326,7 +330,7 @@ function scheduleDetails(
 }
 
 function stableUid(document: TimetableDocument, schedule: ScheduleItem): string {
-  const source = `${document.event.name}|${document.event.date}|${schedule.artist}|${schedule.startTime}|${schedule.type}`;
+  const source = `${document.event.name}|${resolveScheduleDate(document, schedule)}|${schedule.artist}|${schedule.startTime}|${schedule.type}`;
   let hash = 2_166_136_261;
   for (const character of source) {
     hash ^= character.codePointAt(0) ?? 0;

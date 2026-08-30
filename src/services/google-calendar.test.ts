@@ -118,4 +118,26 @@ describe("Google Calendar registration", () => {
       expect.objectContaining({ end: { dateTime: "2026-08-28T00:30:00", timeZone: "Asia/Tokyo" } }),
     );
   });
+
+  it("registers a schedule using its per-item date", async () => {
+    const document = createEmptyDocument();
+    const schedule = createBlankSchedule({
+      date: "2026-10-12",
+      startTime: "11:00",
+      endTime: "11:30",
+    });
+    const insertEvent = vi.fn<GoogleCalendarAdapter["insertEvent"]>(async () => undefined);
+
+    await registerSchedulesWithGoogleCalendar(
+      document,
+      [schedule],
+      { authorize: async () => "token", insertEvent },
+      scheduleTypeLabels,
+    );
+
+    expect(insertEvent).toHaveBeenCalledWith(
+      "token",
+      expect.objectContaining({ start: { dateTime: "2026-10-12T11:00:00", timeZone: "Asia/Tokyo" } }),
+    );
+  });
 });

@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { findDuplicateIds, findInvalidTimeRangeIds } from "../domain/conflicts";
 import {
   createBlankSchedule,
+  resolveScheduleDate,
   scheduleTypes,
   type ScheduleItem,
   type TimetableDocument,
@@ -25,7 +26,7 @@ export function ReviewStep({ document, sourceUrl, onChange, onBack, onNext }: Re
   const language = currentLanguage();
   const [focusedScheduleId, setFocusedScheduleId] = useState<string | null>(null);
   const [sourceSize, setSourceSize] = useState({ width: 0, height: 0 });
-  const duplicates = findDuplicateIds(document.schedules);
+  const duplicates = findDuplicateIds(document.schedules, document.event.date);
   const invalidTimeRanges = findInvalidTimeRangeIds(document.schedules);
   const updateEvent = <Key extends keyof TimetableDocument["event"]>(
     key: Key,
@@ -77,14 +78,11 @@ export function ReviewStep({ document, sourceUrl, onChange, onBack, onNext }: Re
             />
           </label>
           <label>
-            <span>
-              {t("date")} <b>{t("required")}</b>
-            </span>
+            <span>{t("date")}</span>
             <input
               type="date"
               value={document.event.date ?? ""}
               onChange={(e) => updateEvent("date", e.target.value || null)}
-              required
             />
           </label>
           <label>
@@ -197,6 +195,7 @@ export function ReviewStep({ document, sourceUrl, onChange, onBack, onNext }: Re
                 <tr>
                   <th>{t("columns.artist")}</th>
                   <th>{t("columns.type")}</th>
+                  <th>{t("columns.date")}</th>
                   <th>{t("columns.start")}</th>
                   <th>{t("columns.end")}</th>
                   <th>{t("columns.relative")}</th>
@@ -229,6 +228,14 @@ export function ReviewStep({ document, sourceUrl, onChange, onBack, onNext }: Re
                       ) : null}
                     </td>
                     <td>
+                      <input
+                        aria-label={t("scheduleDate")}
+                        type="date"
+                        value={item.date ?? ""}
+                        onChange={(e) => updateSchedule(item.id, { date: e.target.value || null })}
+                      />
+                    </td>
+                    <td>
                       <select
                         aria-label={t("type")}
                         value={item.type}
@@ -256,8 +263,21 @@ export function ReviewStep({ document, sourceUrl, onChange, onBack, onNext }: Re
                         aria-label={t("scheduleEnd")}
                         type="time"
                         value={item.endTime ?? ""}
-                        onChange={(e) => updateSchedule(item.id, { endTime: e.target.value || null })}
+                        onChange={(e) =>
+                          updateSchedule(item.id, {
+                            endTime: e.target.value || null,
+                            endTimeSource: e.target.value ? "manual" : "missing",
+                            verified: false,
+                          })
+                        }
                       />
+                      {item.endTimeSource.startsWith("inferred") ? (
+                        <small className="cell-warning">
+                          {item.endTimeSource === "inferred_next_start"
+                            ? t("endTimeSources.inferred_next_start")
+                            : t("endTimeSources.inferred_default")}
+                        </small>
+                      ) : null}
                       <label className="inline-checkbox">
                         <input
                           type="checkbox"
@@ -358,7 +378,10 @@ export function ReviewStep({ document, sourceUrl, onChange, onBack, onNext }: Re
             onClick={() =>
               onChange({
                 ...document,
-                schedules: document.schedules.map((item) => ({ ...item, verified: true })),
+                schedules: document.schedules.map((item) => ({
+                  ...item,
+                  verified: item.endTimeSource.startsWith("inferred") ? item.verified : true,
+                })),
               })
             }
           >
@@ -366,7 +389,9 @@ export function ReviewStep({ document, sourceUrl, onChange, onBack, onNext }: Re
           </button>
         </section>
       </div>
-      {!document.event.date ? <p className="phase-note">{t("dateReminder")}</p> : null}
+      {document.schedules.some((item) => !resolveScheduleDate(document, item)) ? (
+        <p className="phase-note">{t("dateReminder")}</p>
+      ) : null}
       <div className="footer-actions">
         <button className="ghost-button" type="button" onClick={onBack}>
           {tCommon("back")}

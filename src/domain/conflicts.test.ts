@@ -9,6 +9,23 @@ describe("detectConflicts", () => {
     expect(detectConflicts([first, second])).toEqual([{ firstId: "a", secondId: "b", kind: "overlap" }]);
   });
 
+  it("does not report overlaps across different dates", () => {
+    const first = createBlankSchedule({
+      id: "a",
+      date: "2026-10-11",
+      startTime: "10:00",
+      endTime: "10:30",
+    });
+    const second = createBlankSchedule({
+      id: "b",
+      date: "2026-10-12",
+      startTime: "10:00",
+      endTime: "10:30",
+    });
+
+    expect(detectConflicts([first, second])).toEqual([]);
+  });
+
   it("warns when the travel buffer is too short", () => {
     const first = createBlankSchedule({ id: "a", artist: "A", startTime: "10:00", endTime: "10:30" });
     const second = createBlankSchedule({ id: "b", artist: "B", startTime: "10:35", endTime: "11:00" });
