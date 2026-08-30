@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { createBlankSchedule, createEmptyDocument } from "../domain/timetable";
+import { createBlankSchedule, createEmptyDocument, type TimetableDocument } from "../domain/timetable";
 import { ReviewStep } from "./ReviewStep";
 
 describe("ReviewStep", () => {
@@ -27,21 +27,23 @@ describe("ReviewStep", () => {
       event: { ...createEmptyDocument().event, date: "2026-08-30" },
       schedules: [inherited, explicit],
     };
-    const onChange = vi.fn();
+    const onChange = vi.fn<(document: TimetableDocument) => void>();
 
     render(
       <ReviewStep
         document={document}
         sourceUrl={null}
         onChange={onChange}
-        onBack={vi.fn()}
-        onNext={vi.fn()}
+        onBack={vi.fn<() => void>()}
+        onNext={vi.fn<() => void>()}
       />,
     );
 
     fireEvent.change(screen.getByLabelText(/^date$|^日付$/i), { target: { value: "2026-08-31" } });
 
     const updated = onChange.mock.calls.at(-1)?.[0];
+    expect(updated).toBeDefined();
+    if (!updated) throw new Error("Expected the event date change to emit a document");
     expect(updated.schedules.find((item: { id: string }) => item.id === "inherited")?.verified).toBe(false);
     expect(updated.schedules.find((item: { id: string }) => item.id === "explicit")?.verified).toBe(true);
   });
@@ -60,16 +62,15 @@ describe("ReviewStep", () => {
       <ReviewStep
         document={document}
         sourceUrl={null}
-        onChange={vi.fn()}
-        onBack={vi.fn()}
-        onNext={vi.fn()}
+        onChange={vi.fn<(document: TimetableDocument) => void>()}
+        onBack={vi.fn<() => void>()}
+        onNext={vi.fn<() => void>()}
       />,
     );
 
-    expect(Array.from(view.container.querySelectorAll(".schedule-select"), (button) => button.textContent)).toEqual([
-      "Earlier",
-      "Later",
-    ]);
+    expect(
+      Array.from(view.container.querySelectorAll(".schedule-select"), (button) => button.textContent),
+    ).toEqual(["Earlier", "Later"]);
     expect(document.schedules.map((item) => item.artist)).toEqual(["Later", "Earlier"]);
   });
 
@@ -96,14 +97,14 @@ describe("ReviewStep", () => {
       ],
     };
 
-    const onChange = vi.fn();
+    const onChange = vi.fn<(document: TimetableDocument) => void>();
     const view = render(
       <ReviewStep
         document={document}
         sourceUrl={null}
         onChange={onChange}
-        onBack={vi.fn()}
-        onNext={vi.fn()}
+        onBack={vi.fn<() => void>()}
+        onNext={vi.fn<() => void>()}
       />,
     );
 
@@ -113,8 +114,8 @@ describe("ReviewStep", () => {
         document={onChange.mock.calls[0][0]}
         sourceUrl={null}
         onChange={onChange}
-        onBack={vi.fn()}
-        onNext={vi.fn()}
+        onBack={vi.fn<() => void>()}
+        onNext={vi.fn<() => void>()}
       />,
     );
 

@@ -26,12 +26,12 @@ describe("schedule review rules", () => {
         relativeTimeLabel: "after the show",
       }),
     ).toBe(true);
-    expect(canVerifySchedule(document, { ...complete, endTime: null, relativeTimeLabel: "about 10:00" })).toBe(
-      false,
-    );
-    expect(canVerifySchedule(document, { ...complete, startTime: null, relativeTimeLabel: "until 10:30" })).toBe(
-      false,
-    );
+    expect(
+      canVerifySchedule(document, { ...complete, endTime: null, relativeTimeLabel: "about 10:00" }),
+    ).toBe(false);
+    expect(
+      canVerifySchedule(document, { ...complete, startTime: null, relativeTimeLabel: "until 10:30" }),
+    ).toBe(false);
   });
 
   it("includes unverified, low-confidence, and incomplete schedules in needs review", () => {
