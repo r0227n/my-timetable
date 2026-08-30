@@ -1622,34 +1622,16 @@ textarea {
   border: 0;
 }
 
-@media (max-width: 900px) {
-  .hero-shell {
-    grid-template-columns: 1fr;
-    padding-top: 45px;
-  }
-  .hero-copy {
-    text-align: center;
-  }
-  .hero-copy > p,
-  .privacy-note {
-    margin-left: auto;
-    margin-right: auto;
-  }
-  .adjust-layout,
+@media (max-width: 1000px) {
   .review-layout.with-source,
-  .review-layout:not(.with-source),
-  .selection-layout,
-  .timeline-layout,
-  .export-grid {
+  .review-layout:not(.with-source) {
     grid-template-columns: 1fr;
   }
-  .source-panel,
-  .schedule-detail,
-  .selection-summary,
-  .timeline-controls {
+  .review-layout .source-panel,
+  .review-layout .schedule-detail {
     position: static;
   }
-  .source-panel img {
+  .review-layout .source-panel img {
     max-height: 360px;
   }
   .review-mobile-tabs {
@@ -1670,6 +1652,36 @@ textarea {
   .review-layout.with-source .source-panel.mobile-details,
   .review-layout.with-source .schedule-detail.mobile-source {
     display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .hero-shell {
+    grid-template-columns: 1fr;
+    padding-top: 45px;
+  }
+  .hero-copy {
+    text-align: center;
+  }
+  .hero-copy > p,
+  .privacy-note {
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .adjust-layout,
+  .selection-layout,
+  .timeline-layout,
+  .export-grid {
+    grid-template-columns: 1fr;
+  }
+  .source-panel,
+  .schedule-detail,
+  .selection-summary,
+  .timeline-controls {
+    position: static;
+  }
+  .source-panel img {
+    max-height: 360px;
   }
   .form-grid {
     grid-template-columns: 1fr 1fr;
