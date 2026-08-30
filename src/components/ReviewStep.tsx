@@ -1,10 +1,17 @@
-import { Copy, Plus, Search, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { Check, Copy, Plus, Search, Trash2 } from "lucide-react";
+import type { TFunction } from "i18next";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { findDuplicateIds, findInvalidTimeRangeIds } from "../domain/conflicts";
 import {
+  canVerifySchedule,
+  matchesReviewFilter,
+  needsReview,
+  selectableSchedules,
+  type ReviewFilter,
+} from "../domain/schedule-review";
+import {
   createBlankSchedule,
-  resolveScheduleDate,
   scheduleTypes,
   type ScheduleItem,
   type TimetableDocument,
@@ -19,35 +26,55 @@ interface ReviewStepProps {
   onBack: () => void;
   onNext: () => void;
 }
+type MobilePanel = "details" | "source";
 
 export function ReviewStep({ document, sourceUrl, onChange, onBack, onNext }: ReviewStepProps) {
   const { t } = useTranslation("review");
-  const { t: tCommon } = useTranslation("common");
+  const { t: tc } = useTranslation("common");
   const language = currentLanguage();
-  const [focusedScheduleId, setFocusedScheduleId] = useState<string | null>(null);
+  const [filter, setFilter] = useState<ReviewFilter>("needs_review");
+  const [selectedId, setSelectedId] = useState<string | null>(document.schedules[0]?.id ?? null);
+  const [mobilePanel, setMobilePanel] = useState<MobilePanel>("details");
   const [sourceSize, setSourceSize] = useState({ width: 0, height: 0 });
   const duplicates = findDuplicateIds(document.schedules, document.event.date);
-  const invalidTimeRanges = findInvalidTimeRangeIds(document.schedules);
-  const updateEvent = <Key extends keyof TimetableDocument["event"]>(
-    key: Key,
-    value: TimetableDocument["event"][Key],
-  ) => {
-    onChange({ ...document, event: { ...document.event, [key]: value } });
-  };
-  const updateSchedule = (id: string, patch: Partial<ScheduleItem>) => {
+  const invalidRanges = findInvalidTimeRangeIds(document.schedules);
+  const filtered = useMemo(
+    () => document.schedules.filter((item) => matchesReviewFilter(document, item, filter)),
+    [document, filter],
+  );
+  const effectiveSelectedId = document.schedules.some((item) => item.id === selectedId)
+    ? selectedId
+    : (filtered[0]?.id ?? document.schedules[0]?.id ?? null);
+  const selected = document.schedules.find((item) => item.id === effectiveSelectedId) ?? null;
+  const eligible = document.schedules.filter((item) => !item.verified && canVerifySchedule(document, item));
+  const selectable = selectableSchedules(document);
+  const excludedCount = document.schedules.length - selectable.length;
+
+  const updateEvent = <K extends keyof TimetableDocument["event"]>(
+    key: K,
+    value: TimetableDocument["event"][K],
+  ) => onChange({ ...document, event: { ...document.event, [key]: value } });
+  const updateSchedule = (id: string, patch: Partial<ScheduleItem>) =>
     onChange({
       ...document,
-      schedules: document.schedules.map((item) => (item.id === id ? { ...item, ...patch } : item)),
+      schedules: document.schedules.map((item) =>
+        item.id === id ? { ...item, ...patch, verified: patch.verified ?? false } : item,
+      ),
     });
+  const duplicate = (item: ScheduleItem) => {
+    const copy = { ...item, id: crypto.randomUUID(), verified: false };
+    onChange({ ...document, schedules: [...document.schedules, copy] });
+    setSelectedId(copy.id);
   };
-  const duplicate = (item: ScheduleItem) =>
-    onChange({
-      ...document,
-      schedules: [...document.schedules, { ...item, id: crypto.randomUUID(), verified: false }],
-    });
-  const remove = (id: string) =>
+  const remove = (id: string) => {
     onChange({ ...document, schedules: document.schedules.filter((item) => item.id !== id) });
-  const canContinue = document.schedules.some((item) => item.artist.trim());
+    setSelectedId(document.schedules.find((item) => item.id !== id)?.id ?? null);
+  };
+  const add = () => {
+    const item = createBlankSchedule();
+    onChange({ ...document, schedules: [...document.schedules, item] });
+    setSelectedId(item.id);
+  };
 
   return (
     <main className="workspace-shell wide">
@@ -58,12 +85,8 @@ export function ReviewStep({ document, sourceUrl, onChange, onBack, onNext }: Re
           <p>{t("description")}</p>
         </div>
         <div className="review-count">
-          <strong>
-            {t("verifiedCount", {
-              verified: formatNumber(document.schedules.filter((item) => item.verified).length, language),
-              total: formatNumber(document.schedules.length, language),
-            })}
-          </strong>
+          <strong>{formatNumber(selectable.length, language)}</strong>
+          <span>{t("readyCount", { total: formatNumber(document.schedules.length, language) })}</span>
         </div>
       </div>
       <section className="event-form panel">
@@ -80,6 +103,7 @@ export function ReviewStep({ document, sourceUrl, onChange, onBack, onNext }: Re
           <label>
             <span>{t("date")}</span>
             <input
+              aria-label={t("date")}
               type="date"
               value={document.event.date ?? ""}
               onChange={(e) => updateEvent("date", e.target.value || null)}
@@ -129,9 +153,29 @@ export function ReviewStep({ document, sourceUrl, onChange, onBack, onNext }: Re
           </label>
         </div>
       </section>
+      <div className="review-mobile-tabs" role="tablist" aria-label={t("mobilePanels")}>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mobilePanel === "details"}
+          onClick={() => setMobilePanel("details")}
+        >
+          {t("details")}
+        </button>
+        {sourceUrl ? (
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mobilePanel === "source"}
+            onClick={() => setMobilePanel("source")}
+          >
+            {t("sourceImage")}
+          </button>
+        ) : null}
+      </div>
       <div className={`review-layout ${sourceUrl ? "with-source" : ""}`}>
         {sourceUrl ? (
-          <aside className="source-panel panel">
+          <aside className={`source-panel panel mobile-${mobilePanel}`}>
             <h2>
               <Search size={17} /> {t("sourceImage")}
             </h2>
@@ -139,30 +183,22 @@ export function ReviewStep({ document, sourceUrl, onChange, onBack, onNext }: Re
               <img
                 src={sourceUrl}
                 alt={t("sourceAlt")}
-                onLoad={(event) =>
+                onLoad={(e) =>
                   setSourceSize({
-                    width: event.currentTarget.naturalWidth,
-                    height: event.currentTarget.naturalHeight,
+                    width: e.currentTarget.naturalWidth,
+                    height: e.currentTarget.naturalHeight,
                   })
                 }
               />
-              {focusedScheduleId && sourceSize.width && sourceSize.height ? (
+              {selected && sourceSize.width && sourceSize.height ? (
                 <svg
                   className="source-region-overlay"
                   viewBox={`0 0 ${sourceSize.width} ${sourceSize.height}`}
                   aria-label={t("sourceRegion")}
                 >
-                  {document.schedules
-                    .find((item) => item.id === focusedScheduleId)
-                    ?.sourceRegions.map((region) => (
-                      <rect
-                        key={`${region.x}-${region.y}-${region.width}-${region.height}`}
-                        x={region.x}
-                        y={region.y}
-                        width={region.width}
-                        height={region.height}
-                      />
-                    ))}
+                  {selected.sourceRegions.map((r) => (
+                    <rect key={`${r.x}-${r.y}-${r.width}-${r.height}`} {...r} />
+                  ))}
                 </svg>
               ) : null}
             </div>
@@ -174,229 +210,130 @@ export function ReviewStep({ document, sourceUrl, onChange, onBack, onNext }: Re
               <h2>{t("scheduleList")}</h2>
               <span>
                 {t("scheduleCount", {
-                  count: document.schedules.length,
-                  formattedCount: formatNumber(document.schedules.length, language),
+                  count: filtered.length,
+                  formattedCount: formatNumber(filtered.length, language),
                 })}
               </span>
             </div>
-            <button
-              className="small-button"
-              type="button"
-              onClick={() =>
-                onChange({ ...document, schedules: [...document.schedules, createBlankSchedule()] })
-              }
-            >
+            <button className="small-button" type="button" onClick={add}>
               <Plus size={15} /> {t("addRow")}
             </button>
           </div>
+          <fieldset className="review-filters" aria-label={t("filterLabel")}>
+            {(["all", "needs_review", "verified"] as const).map((value) => (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={filter === value}
+                onClick={() => setFilter(value)}
+              >
+                {t(`filters.${value}`)}
+              </button>
+            ))}
+          </fieldset>
           <div className="schedule-table-wrap">
-            <table className="schedule-table">
+            <table className="schedule-table review-summary-table">
               <thead>
                 <tr>
                   <th>{t("columns.artist")}</th>
                   <th>{t("columns.type")}</th>
-                  <th>{t("columns.date")}</th>
-                  <th>{t("columns.start")}</th>
-                  <th>{t("columns.end")}</th>
-                  <th>{t("columns.relative")}</th>
+                  <th>{t("columns.startEnd")}</th>
                   <th>{t("columns.place")}</th>
-                  <th>{t("columns.attributes")}</th>
                   <th>{t("columns.confidence")}</th>
                   <th>{t("columns.verified")}</th>
-                  <th>
-                    <span className="sr-only">{t("columns.actions")}</span>
-                  </th>
                 </tr>
               </thead>
               <tbody>
-                {document.schedules.map((item) => (
+                {filtered.map((item) => (
                   <tr
                     key={item.id}
-                    onMouseEnter={() => setFocusedScheduleId(item.id)}
-                    onFocusCapture={() => setFocusedScheduleId(item.id)}
-                    className={`${item.confidence === "low" ? "low-confidence" : ""} ${duplicates.has(item.id) ? "duplicate" : ""} ${invalidTimeRanges.has(item.id) ? "invalid" : ""}`}
+                    className={`${effectiveSelectedId === item.id ? "selected" : ""} ${needsReview(document, item) ? "needs-review" : ""}`}
+                    onClick={() => setSelectedId(item.id)}
                   >
                     <td>
-                      <input
-                        aria-label={t("artist")}
-                        value={item.artist}
-                        onChange={(e) => updateSchedule(item.id, { artist: e.target.value })}
-                        placeholder={t("artist")}
-                      />
-                      {duplicates.has(item.id) ? (
-                        <small className="cell-warning">{t("duplicateWarning")}</small>
-                      ) : null}
+                      <button className="schedule-select" type="button">
+                        {item.artist || t("scheduleFallback")}
+                      </button>
+                    </td>
+                    <td>{tc(`scheduleTypes.${item.type}`)}</td>
+                    <td>
+                      {item.startTime ?? item.relativeTimeLabel ?? tc("unset")}{" "}
+                      {item.endTime
+                        ? `– ${item.endTime}${item.endsNextDay ? ` ${t("nextDayShort")}` : ""}`
+                        : ""}
+                    </td>
+                    <td>{[item.stage, item.booth].filter(Boolean).join(" / ") || tc("unset")}</td>
+                    <td>
+                      <span className={`confidence ${item.confidence}`}>
+                        {tc(`confidence.${item.confidence}`)}
+                      </span>
                     </td>
                     <td>
-                      <input
-                        aria-label={t("scheduleDate")}
-                        type="date"
-                        value={item.date ?? ""}
-                        onChange={(e) => updateSchedule(item.id, { date: e.target.value || null })}
-                      />
-                    </td>
-                    <td>
-                      <select
-                        aria-label={t("type")}
-                        value={item.type}
-                        onChange={(e) =>
-                          updateSchedule(item.id, { type: e.target.value as ScheduleItem["type"] })
-                        }
-                      >
-                        {scheduleTypes.map((value) => (
-                          <option key={value} value={value}>
-                            {tCommon(`scheduleTypes.${value}`)}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td>
-                      <input
-                        aria-label={t("scheduleStart")}
-                        type="time"
-                        value={item.startTime ?? ""}
-                        onChange={(e) => updateSchedule(item.id, { startTime: e.target.value || null })}
-                      />
-                    </td>
-                    <td>
-                      <input
-                        aria-label={t("scheduleEnd")}
-                        type="time"
-                        value={item.endTime ?? ""}
-                        onChange={(e) =>
-                          updateSchedule(item.id, {
-                            endTime: e.target.value || null,
-                            endTimeSource: e.target.value ? "manual" : "missing",
-                            verified: false,
-                          })
-                        }
-                      />
-                      {item.endTimeSource.startsWith("inferred") ? (
-                        <small className="cell-warning">
-                          {item.endTimeSource === "inferred_next_start"
-                            ? t("endTimeSources.inferred_next_start")
-                            : t("endTimeSources.inferred_default")}
-                        </small>
-                      ) : null}
-                      <label className="inline-checkbox">
-                        <input
-                          type="checkbox"
-                          checked={item.endsNextDay}
-                          onChange={(e) => updateSchedule(item.id, { endsNextDay: e.target.checked })}
-                        />
-                        <span>翌日</span>
-                      </label>
-                      {invalidTimeRanges.has(item.id) ? (
-                        <small className="cell-warning">{t("invalidRange")}</small>
-                      ) : null}
-                    </td>
-                    <td>
-                      <input
-                        aria-label={t("relativeTime")}
-                        value={item.relativeTimeLabel ?? ""}
-                        onChange={(e) =>
-                          updateSchedule(item.id, { relativeTimeLabel: e.target.value || null })
-                        }
-                        placeholder={t("relativePlaceholder")}
-                      />
-                    </td>
-                    <td>
-                      <div className="stacked-inputs">
-                        <input
-                          aria-label={t("stage")}
-                          value={item.stage ?? ""}
-                          onChange={(e) => updateSchedule(item.id, { stage: e.target.value || null })}
-                          placeholder={t("stage")}
-                        />
-                        <input
-                          aria-label={t("booth")}
-                          value={item.booth ?? ""}
-                          onChange={(e) => updateSchedule(item.id, { booth: e.target.value || null })}
-                          placeholder={t("booth")}
-                        />
-                      </div>
-                    </td>
-                    <td>
-                      <textarea
-                        aria-label={t("attributes")}
-                        value={formatAttributes(item.attributes, {
-                          unknown: tCommon("attribute.unknown"),
-                          yes: tCommon("attribute.yes"),
-                          no: tCommon("attribute.no"),
-                        })}
-                        onChange={(e) =>
-                          updateSchedule(item.id, {
-                            attributes: parseAttributes(e.target.value, {
-                              yes: tCommon("attribute.yes"),
-                              no: tCommon("attribute.no"),
-                            }),
-                          })
-                        }
-                        placeholder={t("attributesPlaceholder")}
-                      />
-                    </td>
-                    <td>
-                      <span className={`confidence ${item.confidence}`}>{item.confidence}</span>
-                    </td>
-                    <td>
-                      <label className="check-label">
-                        <input
-                          aria-label={t("markVerified", { artist: item.artist || t("scheduleFallback") })}
-                          type="checkbox"
-                          checked={item.verified}
-                          onChange={(e) => updateSchedule(item.id, { verified: e.target.checked })}
-                        />
-                        <span>{t("verified")}</span>
-                      </label>
-                    </td>
-                    <td>
-                      <div className="row-actions">
-                        <button
-                          type="button"
-                          onClick={() => duplicate(item)}
-                          aria-label={t("duplicate", { artist: item.artist || t("scheduleFallback") })}
-                        >
-                          <Copy size={15} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => remove(item.id)}
-                          aria-label={t("delete", { artist: item.artist || t("scheduleFallback") })}
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                      </div>
+                      {item.verified && canVerifySchedule(document, item) ? (
+                        <span className="verified-status">
+                          <Check size={14} /> {t("verified")}
+                        </span>
+                      ) : (
+                        t("unverified")
+                      )}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            {!filtered.length ? <p className="empty-review">{t("emptyFilter")}</p> : null}
           </div>
           <button
             className="text-button align-left"
             type="button"
+            disabled={!eligible.length}
             onClick={() =>
               onChange({
                 ...document,
-                schedules: document.schedules.map((item) => ({
-                  ...item,
-                  verified: item.endTimeSource.startsWith("inferred") ? item.verified : true,
-                })),
+                schedules: document.schedules.map((item) =>
+                  eligible.some((e) => e.id === item.id) ? { ...item, verified: true } : item,
+                ),
               })
             }
           >
-            {t("verifyAll")}
+            {t("verifyEligible", {
+              count: eligible.length,
+              formattedCount: formatNumber(eligible.length, language),
+            })}
           </button>
         </section>
+        <aside className={`schedule-detail panel mobile-${mobilePanel}`}>
+          <h2>{t("details")}</h2>
+          {selected ? (
+            <ScheduleDetails
+              item={selected}
+              document={document}
+              duplicates={duplicates}
+              invalidRanges={invalidRanges}
+              update={updateSchedule}
+              duplicate={duplicate}
+              remove={remove}
+              t={t}
+              tc={tc}
+            />
+          ) : (
+            <p className="muted">{t("selectPrompt")}</p>
+          )}
+        </aside>
       </div>
-      {document.schedules.some((item) => !resolveScheduleDate(document, item)) ? (
-        <p className="phase-note">{t("dateReminder")}</p>
+      {excludedCount ? (
+        <p className="phase-note review-exclusion-note">
+          {t("excludedNotice", {
+            count: excludedCount,
+            formattedCount: formatNumber(excludedCount, language),
+          })}
+        </p>
       ) : null}
       <div className="footer-actions">
         <button className="ghost-button" type="button" onClick={onBack}>
-          {tCommon("back")}
+          {tc("back")}
         </button>
-        <button className="primary-button" type="button" disabled={!canContinue} onClick={onNext}>
+        <button className="primary-button" type="button" disabled={!selectable.length} onClick={onNext}>
           {t("next")}
         </button>
       </div>
@@ -404,6 +341,173 @@ export function ReviewStep({ document, sourceUrl, onChange, onBack, onNext }: Re
   );
 }
 
+interface DetailProps {
+  item: ScheduleItem;
+  document: TimetableDocument;
+  duplicates: Set<string>;
+  invalidRanges: Set<string>;
+  update: (id: string, patch: Partial<ScheduleItem>) => void;
+  duplicate: (item: ScheduleItem) => void;
+  remove: (id: string) => void;
+  t: TFunction<"review">;
+  tc: TFunction<"common">;
+}
+function ScheduleDetails({
+  item,
+  document,
+  duplicates,
+  invalidRanges,
+  update,
+  duplicate,
+  remove,
+  t,
+  tc,
+}: DetailProps) {
+  const valid = canVerifySchedule(document, item);
+  return (
+    <div className="detail-form">
+      <label>
+        <span>{t("artist")}</span>
+        <input
+          aria-label={t("artist")}
+          value={item.artist}
+          onChange={(e) => update(item.id, { artist: e.target.value })}
+        />
+        {duplicates.has(item.id) ? <small className="cell-warning">{t("duplicateWarning")}</small> : null}
+      </label>
+      <label>
+        <span>{t("type")}</span>
+        <select
+          aria-label={t("type")}
+          value={item.type}
+          onChange={(e) => update(item.id, { type: e.target.value as ScheduleItem["type"] })}
+        >
+          {scheduleTypes.map((value) => (
+            <option key={value} value={value}>
+              {tc(`scheduleTypes.${value}`)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        <span>{t("scheduleDate")}</span>
+        <input
+          aria-label={t("scheduleDate")}
+          type="date"
+          value={item.date ?? ""}
+          onChange={(e) => update(item.id, { date: e.target.value || null })}
+        />
+      </label>
+      <div className="detail-time-grid">
+        <label>
+          <span>{t("scheduleStart")}</span>
+          <input
+            aria-label={t("scheduleStart")}
+            type="time"
+            value={item.startTime ?? ""}
+            onChange={(e) => update(item.id, { startTime: e.target.value || null })}
+          />
+        </label>
+        <label>
+          <span>{t("scheduleEnd")}</span>
+          <input
+            aria-label={t("scheduleEnd")}
+            type="time"
+            value={item.endTime ?? ""}
+            onChange={(e) =>
+              update(item.id, {
+                endTime: e.target.value || null,
+                endTimeSource: e.target.value ? "manual" : "missing",
+              })
+            }
+          />
+        </label>
+      </div>
+      {item.endTimeSource.startsWith("inferred") ? (
+        <small className="cell-warning">
+          {item.endTimeSource === "inferred_next_start"
+            ? t("endTimeSources.inferred_next_start")
+            : t("endTimeSources.inferred_default")}
+        </small>
+      ) : null}
+      <label className="inline-checkbox">
+        <input
+          type="checkbox"
+          checked={item.endsNextDay}
+          onChange={(e) => update(item.id, { endsNextDay: e.target.checked })}
+        />
+        <span>{t("nextDay")}</span>
+      </label>
+      {invalidRanges.has(item.id) ? <small className="cell-warning">{t("invalidRange")}</small> : null}
+      <label>
+        <span>{t("relativeTime")}</span>
+        <input
+          aria-label={t("relativeTime")}
+          value={item.relativeTimeLabel ?? ""}
+          onChange={(e) => update(item.id, { relativeTimeLabel: e.target.value || null })}
+          placeholder={t("relativePlaceholder")}
+        />
+      </label>
+      <div className="detail-time-grid">
+        <label>
+          <span>{t("stage")}</span>
+          <input
+            aria-label={t("stage")}
+            value={item.stage ?? ""}
+            onChange={(e) => update(item.id, { stage: e.target.value || null })}
+          />
+        </label>
+        <label>
+          <span>{t("booth")}</span>
+          <input
+            aria-label={t("booth")}
+            value={item.booth ?? ""}
+            onChange={(e) => update(item.id, { booth: e.target.value || null })}
+          />
+        </label>
+      </div>
+      <label>
+        <span>{t("attributes")}</span>
+        <textarea
+          aria-label={t("attributes")}
+          value={formatAttributes(item.attributes, {
+            unknown: tc("attribute.unknown"),
+            yes: tc("attribute.yes"),
+            no: tc("attribute.no"),
+          })}
+          onChange={(e) =>
+            update(item.id, {
+              attributes: parseAttributes(e.target.value, {
+                yes: tc("attribute.yes"),
+                no: tc("attribute.no"),
+              }),
+            })
+          }
+          placeholder={t("attributesPlaceholder")}
+        />
+      </label>
+      {!valid ? <p className="detail-error">{t("cannotVerify")}</p> : null}
+      <label className="check-label">
+        <input
+          aria-label={t("markVerified", { artist: item.artist || t("scheduleFallback") })}
+          type="checkbox"
+          checked={item.verified}
+          disabled={!valid}
+          onChange={(e) => update(item.id, { verified: e.target.checked })}
+        />
+        <span>{t("verified")}</span>
+      </label>
+      <div className="detail-actions">
+        <button type="button" className="text-button" onClick={() => duplicate(item)}>
+          <Copy size={15} /> {t("duplicate", { artist: item.artist || t("scheduleFallback") })}
+        </button>
+        <button type="button" className="text-button danger" onClick={() => remove(item.id)}>
+          <Trash2 size={15} /> {t("delete", { artist: item.artist || t("scheduleFallback") })}
+        </button>
+      </div>
+    </div>
+  );
+}
 function formatAttributes(
   attributes: ScheduleItem["attributes"],
   labels: { unknown: string; yes: string; no: string },
@@ -412,7 +516,6 @@ function formatAttributes(
     .map(([name, value]) => `${name}=${value === null ? labels.unknown : value ? labels.yes : labels.no}`)
     .join("\n");
 }
-
 function parseAttributes(value: string, labels: { yes: string; no: string }): ScheduleItem["attributes"] {
   return Object.fromEntries(
     value
