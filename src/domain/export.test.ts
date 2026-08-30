@@ -89,6 +89,46 @@ describe("timeline export", () => {
     expect(ics).toContain("DTEND;TZID=Asia/Tokyo:20260828T003000");
   });
 
+  it("uses per-schedule dates for a multi-day timetable", () => {
+    const multiDay = { ...document, event: { ...document.event, date: null } };
+    const schedules = [
+      createBlankSchedule({
+        id: "day-one",
+        artist: "Day One",
+        date: "2026-10-11",
+        startTime: "10:00",
+        endTime: "10:30",
+      }),
+      createBlankSchedule({
+        id: "day-two",
+        artist: "Day Two",
+        date: "2026-10-12",
+        startTime: "11:00",
+        endTime: "11:30",
+      }),
+    ];
+
+    const ics = buildIcsCalendar(multiDay, schedules, scheduleTypeLabels);
+
+    expect(ics).toContain("DTSTART;TZID=Asia/Tokyo:20261011T100000");
+    expect(ics).toContain("DTSTART;TZID=Asia/Tokyo:20261012T110000");
+  });
+
+  it("excludes an inferred end time until the schedule is verified", () => {
+    const inferred = createBlankSchedule({
+      artist: "Needs review",
+      startTime: "10:00",
+      endTime: "10:30",
+      endTimeSource: "inferred_default",
+      verified: false,
+    });
+
+    expect(buildIcsCalendar(document, [inferred], scheduleTypeLabels)).not.toContain("BEGIN:VEVENT");
+    expect(buildIcsCalendar(document, [{ ...inferred, verified: true }], scheduleTypeLabels)).toContain(
+      "BEGIN:VEVENT",
+    );
+  });
+
   it("positions timed cards on a constant time scale and separates simultaneous schedules", () => {
     const schedules = [
       createBlankSchedule({ id: "early", artist: "Early", startTime: "10:00", endTime: "10:20" }),

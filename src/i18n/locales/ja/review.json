@@ -4,7 +4,7 @@
   "verifiedCount": "{{verified}} / {{total}} 確認済み",
   "eventInfo": "イベント情報",
   "eventName": "イベント名",
-  "date": "開催日",
+  "date": "既定の開催日",
   "required": "必須",
   "venue": "会場",
   "venuePlaceholder": "会場名",
@@ -23,6 +23,7 @@
   "columns": {
     "artist": "出演者名",
     "type": "種別",
+    "date": "開催日",
     "start": "開始",
     "end": "終了",
     "relative": "相対時刻",
@@ -36,7 +37,12 @@
   "type": "種別",
   "duplicateWarning": "重複しています",
   "scheduleStart": "開始時刻",
+  "scheduleDate": "予定日",
   "scheduleEnd": "終了時刻",
+  "endTimeSources": {
+    "inferred_next_start": "次の開始時刻からの候補（要確認）",
+    "inferred_default": "既定時間からの候補（要確認）"
+  },
   "invalidRange": "終了時刻は開始時刻より後にしてください",
   "relativeTime": "相対時刻表現",
   "relativePlaceholder": "終演後など",
@@ -49,7 +55,7 @@
   "verified": "確認済み",
   "duplicate": "{{artist}}を複製",
   "delete": "{{artist}}を削除",
-  "verifyAll": "すべて確認済みにする",
-  "dateReminder": "開催日はカレンダー出力までに入力してください。",
+  "verifyAll": "明記項目をすべて確認済みにする",
+  "dateReminder": "開催日がない予定はカレンダーへ登録できません。既定日または予定ごとの日付を入力してください。",
   "next": "予定を選ぶ"
 }

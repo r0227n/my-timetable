@@ -2,7 +2,12 @@ import { AlertTriangle, Check, Search } from "lucide-react";
 import { useDeferredValue, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { detectConflicts, findInvalidTimeRangeIds } from "../domain/conflicts";
-import { scheduleTypes, type ScheduleType, type TimetableDocument } from "../domain/timetable";
+import {
+  resolveScheduleDate,
+  scheduleTypes,
+  type ScheduleType,
+  type TimetableDocument,
+} from "../domain/timetable";
 import { formatNumber } from "../i18n/format";
 import { currentLanguage } from "../i18n/i18n";
 
@@ -38,7 +43,7 @@ export function SelectionStep({ document, selected, onSelectedChange, onBack, on
     [deferredQuery, document.schedules, stage, type],
   );
   const selectedItems = document.schedules.filter((item) => selected.has(item.id));
-  const conflicts = detectConflicts(selectedItems, buffer);
+  const conflicts = detectConflicts(selectedItems, buffer, document.event.date);
   const invalidTimeRanges = findInvalidTimeRangeIds(selectedItems);
   const conflictIds = new Set([
     ...conflicts.flatMap((item) => [item.firstId, item.secondId]),
@@ -135,7 +140,11 @@ export function SelectionStep({ document, selected, onSelectedChange, onBack, on
                   </header>
                   <div className="schedule-cards">
                     {items
-                      .toSorted((a, b) => (a.startTime ?? "99:99").localeCompare(b.startTime ?? "99:99"))
+                      .toSorted((a, b) =>
+                        `${resolveScheduleDate(document, a) ?? "9999"} ${a.startTime ?? "99:99"}`.localeCompare(
+                          `${resolveScheduleDate(document, b) ?? "9999"} ${b.startTime ?? "99:99"}`,
+                        ),
+                      )
                       .map((item) => (
                         <label
                           className={`schedule-card ${selected.has(item.id) ? "selected" : ""} ${conflictIds.has(item.id) ? "conflict" : ""}`}
@@ -148,6 +157,7 @@ export function SelectionStep({ document, selected, onSelectedChange, onBack, on
                           />
                           <span className={`type-stripe ${item.type}`} />
                           <span className="schedule-time">
+                            <small>{resolveScheduleDate(document, item) ?? tCommon("unset")}</small>
                             {item.startTime ?? tCommon("unset")}
                             <small>{item.endTime ? `– ${item.endTime}` : ""}</small>
                           </span>
@@ -179,10 +189,17 @@ export function SelectionStep({ document, selected, onSelectedChange, onBack, on
           {selectedItems.length ? (
             <ol>
               {selectedItems
-                .toSorted((a, b) => (a.startTime ?? "99:99").localeCompare(b.startTime ?? "99:99"))
+                .toSorted((a, b) =>
+                  `${resolveScheduleDate(document, a) ?? "9999"} ${a.startTime ?? "99:99"}`.localeCompare(
+                    `${resolveScheduleDate(document, b) ?? "9999"} ${b.startTime ?? "99:99"}`,
+                  ),
+                )
                 .map((item) => (
                   <li key={item.id}>
-                    <time>{item.startTime ?? tCommon("unset")}</time>
+                    <time>
+                      {resolveScheduleDate(document, item) ?? tCommon("unset")}{" "}
+                      {item.startTime ?? tCommon("unset")}
+                    </time>
                     <span>
                       <strong>{item.artist}</strong>
                       <small>

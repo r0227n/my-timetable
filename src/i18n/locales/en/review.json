@@ -4,7 +4,7 @@
   "verifiedCount": "{{verified}} / {{total}} verified",
   "eventInfo": "Event information",
   "eventName": "Event name",
-  "date": "Event date",
+  "date": "Default event date",
   "required": "Required",
   "venue": "Venue",
   "venuePlaceholder": "Venue name",
@@ -23,6 +23,7 @@
   "columns": {
     "artist": "Artist",
     "type": "Type",
+    "date": "Date",
     "start": "Start",
     "end": "End",
     "relative": "Relative time",
@@ -36,7 +37,12 @@
   "type": "Type",
   "duplicateWarning": "This schedule is duplicated",
   "scheduleStart": "Start time",
+  "scheduleDate": "Schedule date",
   "scheduleEnd": "End time",
+  "endTimeSources": {
+    "inferred_next_start": "Suggested from the next start (review required)",
+    "inferred_default": "Suggested from the default duration (review required)"
+  },
   "invalidRange": "The end time must be after the start time",
   "relativeTime": "Relative time",
   "relativePlaceholder": "e.g. after the show",
@@ -49,7 +55,7 @@
   "verified": "Verified",
   "duplicate": "Duplicate {{artist}}",
   "delete": "Delete {{artist}}",
-  "verifyAll": "Mark all as verified",
-  "dateReminder": "Enter the event date before exporting to a calendar.",
+  "verifyAll": "Verify all explicitly stated items",
+  "dateReminder": "Schedules without a date cannot be added to a calendar. Enter a default or per-schedule date.",
   "next": "Choose schedules"
 }

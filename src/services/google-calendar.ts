@@ -1,5 +1,10 @@
 import { AppError, errorCode, errorDetails, type AppErrorCode } from "../domain/errors";
-import type { ScheduleItem, ScheduleType, TimetableDocument } from "../domain/timetable";
+import {
+  resolveScheduleDate,
+  type ScheduleItem,
+  type ScheduleType,
+  type TimetableDocument,
+} from "../domain/timetable";
 
 export interface GoogleCalendarEvent {
   summary: string;
@@ -28,8 +33,10 @@ export async function registerSchedulesWithGoogleCalendar(
   adapter: GoogleCalendarAdapter,
   scheduleTypeLabels: Record<ScheduleType, string>,
 ): Promise<CalendarRegistrationResult[]> {
-  if (!document.event.date) throw new AppError("googleDateRequired");
-  const registerable = schedules.filter(isCalendarScheduleRegisterable);
+  const registerable = schedules.filter((schedule) => isCalendarScheduleRegisterable(schedule, document));
+  if (!registerable.length && schedules.some((schedule) => !resolveScheduleDate(document, schedule))) {
+    throw new AppError("googleDateRequired");
+  }
   const accessToken = registerable.length ? await adapter.authorize() : "";
   return await Promise.all(
     registerable.map(async (schedule): Promise<CalendarRegistrationResult> => {
@@ -88,7 +95,7 @@ function toGoogleEvent(
   schedule: ScheduleItem,
   scheduleTypeLabels: Record<ScheduleType, string>,
 ): GoogleCalendarEvent {
-  const date = document.event.date!;
+  const date = resolveScheduleDate(document, schedule)!;
   const endDate = schedule.endsNextDay ? addDays(date, 1) : date;
   const location = schedule.stage ?? schedule.booth ?? document.event.venue ?? undefined;
   return {
@@ -104,9 +111,14 @@ function toGoogleEvent(
 
 export function isCalendarScheduleRegisterable(
   schedule: ScheduleItem,
+  document?: TimetableDocument,
 ): schedule is ScheduleItem & { startTime: string; endTime: string } {
   return Boolean(
-    schedule.startTime && schedule.endTime && (schedule.endsNextDay || schedule.endTime > schedule.startTime),
+    (!document || resolveScheduleDate(document, schedule)) &&
+    schedule.startTime &&
+    schedule.endTime &&
+    (["explicit", "manual"].includes(schedule.endTimeSource) || schedule.verified) &&
+    (schedule.endsNextDay || schedule.endTime > schedule.startTime),
   );
 }
 

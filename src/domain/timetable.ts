@@ -2,6 +2,13 @@ import { z } from "zod";
 
 export const confidenceLevels = ["high", "medium", "low"] as const;
 export const scheduleTypes = ["live", "meet_and_greet", "merch", "other"] as const;
+export const endTimeSources = [
+  "explicit",
+  "manual",
+  "inferred_next_start",
+  "inferred_default",
+  "missing",
+] as const;
 
 export const confidenceSchema = z.enum(confidenceLevels);
 export const scheduleTypeSchema = z.enum(scheduleTypes);
@@ -10,6 +17,10 @@ export const scheduleItemSchema = z.object({
   id: z.string().min(1),
   artist: z.string(),
   type: scheduleTypeSchema,
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .nullable(),
   startTime: z
     .string()
     .regex(/^([01]\d|2[0-3]):[0-5]\d$/)
@@ -18,6 +29,7 @@ export const scheduleItemSchema = z.object({
     .string()
     .regex(/^([01]\d|2[0-3]):[0-5]\d$/)
     .nullable(),
+  endTimeSource: z.enum(endTimeSources),
   endsNextDay: z.boolean(),
   relativeTimeLabel: z.string().nullable(),
   stage: z.string().nullable(),
@@ -36,7 +48,7 @@ export const scheduleItemSchema = z.object({
 });
 
 export const timetableDocumentSchema = z.object({
-  schemaVersion: z.literal(1),
+  schemaVersion: z.literal(2),
   event: z.object({
     name: z.string(),
     date: z
@@ -62,8 +74,10 @@ export function createBlankSchedule(overrides: Partial<ScheduleItem> = {}): Sche
     id: crypto.randomUUID(),
     artist: "",
     type: "live",
+    date: null,
     startTime: null,
     endTime: null,
+    endTimeSource: overrides.endTime ? "explicit" : "missing",
     endsNextDay: false,
     relativeTimeLabel: null,
     stage: null,
@@ -78,7 +92,7 @@ export function createBlankSchedule(overrides: Partial<ScheduleItem> = {}): Sche
 
 export function createEmptyDocument(): TimetableDocument {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     event: {
       name: "",
       date: null,
@@ -90,4 +104,8 @@ export function createEmptyDocument(): TimetableDocument {
     },
     schedules: [createBlankSchedule()],
   };
+}
+
+export function resolveScheduleDate(document: TimetableDocument, schedule: ScheduleItem): string | null {
+  return schedule.date ?? document.event.date;
 }
