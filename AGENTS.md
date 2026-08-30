@@ -80,12 +80,13 @@ WebGPUを実際に確認する変更では`agent-browser skills get core --full`
 - worktree削除、強制cleanup、branch削除は、ユーザーが対象を明示して依頼した場合だけ行う。
 - IssueからPRまで進める作業では`issue-workflow`を使用し、既存PRの再開やbase選択を含む詳細手順に従う。
 
-## Bot実行契約
+## Issue実行契約
 
-- 人間が付けた`bot:execute`だけを実装開始の許可とする。Botは取得時に`bot:running`へ遷移し、同一Issueを重複実行しない。
+- 対話中の人間がIssueの実装を明示的に依頼した場合、その依頼を実装開始の許可とする。`bot:execute`ラベルは不要とする。
+- `bot:*`ラベルによる取得と状態遷移は、将来の自動実行基盤だけに適用する。対話型Agentはこれらのラベルを変更しない。
 - Issue作成Agentは`.github/ISSUE_TEMPLATE/`の該当Issue Formを入力契約として使う。必要な要件を表現できない場合は、Issue本文へ独自の構造を増やすのではなくIssue Formを更新する。
 - 実装PRは`develop`をbaseとする。`main`への昇格とリリースは別工程として扱う。
-- mergeは`bot:execute`を付けた人間の許可範囲に含む。ただし、Ready PR、競合なし、必須CI成功、GitHub Rulesets通過のすべてを満たした場合だけ実行する。
+- 対話型Agentによるmergeには、実装依頼とは別の明示的な依頼を必要とする。自動実行基盤によるmerge許可は、同基盤を導入するIssueで定義する。
 - GitHub App、Rulesets、branch protection、認証情報、CI設定をIssue達成のために緩和しない。必要な基盤変更は別Issueへ分離する。
 
 ## PRとmerge
@@ -95,8 +96,6 @@ WebGPUを実際に確認する変更では`agent-browser skills get core --full`
 3. Ready、merge競合なし、必須CI成功、適用されるGitHub Rulesets通過をすべて確認してからmergeする。
 4. RulesetやCIを維持したままmergeできない場合は`bot:blocked`とする。
 5. merge後もworktreeとbranchを自動削除しない。
-
-将来のHermes専用GitHub Appには、owner review用Rulesetだけ`For pull requests only`のbypassを付与する。CIと安全性のRulesetにはbypassを付与しない。App作成、権限、secret、Ruleset、自動mergeの実設定は専用Issueで管理する。
 
 ## 完了時の報告
 
