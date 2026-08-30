@@ -1513,6 +1513,17 @@ textarea {
   gap: 1px;
   background: var(--line);
 }
+.schedule-card-row {
+  display: grid;
+  background: var(--surface);
+}
+.schedule-card-row .schedule-card {
+  width: 100%;
+}
+.schedule-card-row > .text-button {
+  justify-self: start;
+  margin: 0 18px 10px;
+}
 .schedule-card {
   min-height: 78px;
   padding: 14px 14px 14px 18px;

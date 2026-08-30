@@ -169,4 +169,66 @@ describe("ReviewStep", () => {
 
     expect(screen.getByLabelText(/出演者名|artist/)).toHaveValue("Beta");
   });
+
+  it("links and unlinks merchandise through the related LIVE selector without exposing a raw ID field", async () => {
+    const user = userEvent.setup();
+    const document = {
+      ...createEmptyDocument(),
+      event: { ...createEmptyDocument().event, date: "2026-09-13" },
+      schedules: [
+        createBlankSchedule({
+          id: "live",
+          artist: "Idol A",
+          type: "live",
+          startTime: "09:30",
+          endTime: "09:50",
+        }),
+        createBlankSchedule({
+          id: "merch",
+          artist: "Idol A",
+          type: "merch",
+          startTime: "10:10",
+          endTime: "11:30",
+          booth: "A",
+        }),
+      ],
+    };
+    const onChange = vi.fn<(document: TimetableDocument) => void>();
+    const view = render(
+      <ReviewStep
+        document={document}
+        sourceUrl={null}
+        ocrResult={null}
+        onChange={onChange}
+        onBack={vi.fn<() => void>()}
+        onNext={vi.fn<() => void>()}
+      />,
+    );
+
+    await user.click(view.container.querySelectorAll<HTMLButtonElement>(".schedule-select")[1]!);
+    const related = screen.getByLabelText(/relatedLive|関連するLIVE|Related LIVE/);
+    expect(screen.queryByLabelText(/relationGroupId/i)).not.toBeInTheDocument();
+    await user.selectOptions(related, "live");
+
+    const updated = onChange.mock.calls.at(-1)![0];
+    expect(updated.schedules.map((item) => item.relationGroupId)).toEqual([
+      expect.any(String),
+      expect.any(String),
+    ]);
+    expect(updated.schedules[0]!.relationGroupId).toBe(updated.schedules[1]!.relationGroupId);
+    view.rerender(
+      <ReviewStep
+        document={updated}
+        sourceUrl={null}
+        ocrResult={null}
+        onChange={onChange}
+        onBack={vi.fn<() => void>()}
+        onNext={vi.fn<() => void>()}
+      />,
+    );
+    await user.selectOptions(screen.getByLabelText(/relatedLive|関連するLIVE|Related LIVE/), "");
+    expect(onChange.mock.calls.at(-1)![0].schedules.every((item) => item.relationGroupId === null)).toBe(
+      true,
+    );
+  });
 });

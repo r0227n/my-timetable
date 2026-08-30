@@ -1,5 +1,6 @@
 import {
   resolveScheduleDate,
+  scheduleDisplayName,
   type ScheduleItem,
   type ScheduleType,
   type TimetableDocument,
@@ -87,7 +88,12 @@ export function buildIcsCalendar(
     const start = `${date}T${schedule.startTime.replace(":", "")}00`;
     const end = `${endDate}T${schedule.endTime.replace(":", "")}00`;
     const location = schedule.stage ?? schedule.booth ?? document.event.venue ?? "";
-    const description = [document.event.name, scheduleTypeLabels[schedule.type], ...document.event.notes]
+    const description = [
+      document.event.name,
+      schedule.title,
+      scheduleTypeLabels[schedule.type],
+      ...document.event.notes,
+    ]
       .filter(Boolean)
       .join("\n");
     return [
@@ -96,7 +102,7 @@ export function buildIcsCalendar(
       `DTSTAMP:${formatUtcTimestamp(new Date())}`,
       `DTSTART;TZID=${escapeIcs(document.event.timezone)}:${start}`,
       `DTEND;TZID=${escapeIcs(document.event.timezone)}:${end}`,
-      `SUMMARY:${escapeIcs(`${schedule.artist} - ${scheduleTypeLabels[schedule.type]}`)}`,
+      `SUMMARY:${escapeIcs(scheduleSummary(schedule, scheduleTypeLabels))}`,
       `LOCATION:${escapeIcs(location)}`,
       `DESCRIPTION:${escapeIcs(description)}`,
       "END:VEVENT",
@@ -314,7 +320,7 @@ function renderTimelineCard(
     other: "#777777",
   };
   const clipId = `card-${stableTextHash(schedule.id)}`;
-  const primaryText = `${schedule.startTime ?? schedule.relativeTimeLabel ?? labels.unsetTime} ${schedule.artist}`;
+  const primaryText = `${schedule.startTime ?? schedule.relativeTimeLabel ?? labels.unsetTime} ${scheduleDisplayName(schedule)}`;
   const details = scheduleDetails(schedule, options, labels.scheduleTypes);
   const textWidth = Math.max(0, width - (conflicting ? 58 : 32));
   return [
@@ -368,6 +374,7 @@ function scheduleDetails(
 ): string {
   return [
     options.showType ? scheduleTypeLabels[schedule.type] : null,
+    schedule.artist && schedule.title ? schedule.title : null,
     options.showStage ? schedule.stage : null,
     options.showBooth ? schedule.booth : null,
   ]
@@ -376,13 +383,19 @@ function scheduleDetails(
 }
 
 function stableUid(document: TimetableDocument, schedule: ScheduleItem): string {
-  const source = `${document.event.name}|${resolveScheduleDate(document, schedule)}|${schedule.artist}|${schedule.startTime}|${schedule.type}`;
+  const source = `${document.event.name}|${resolveScheduleDate(document, schedule)}|${scheduleDisplayName(schedule)}|${schedule.startTime}|${schedule.type}`;
   let hash = 2_166_136_261;
   for (const character of source) {
     hash ^= character.codePointAt(0) ?? 0;
     hash = Math.imul(hash, 16_777_619);
   }
   return `${(hash >>> 0).toString(16)}@my-timetable`;
+}
+
+function scheduleSummary(schedule: ScheduleItem, scheduleTypeLabels: Record<ScheduleType, string>): string {
+  const name = scheduleDisplayName(schedule);
+  const label = schedule.title && schedule.artist ? schedule.title : scheduleTypeLabels[schedule.type];
+  return `${name} - ${label}`;
 }
 
 function escapeXml(value: string): string {

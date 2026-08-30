@@ -34,4 +34,19 @@ describe("inferMissingEndTimes", () => {
       expect.objectContaining({ endTime: "15:40", endTimeSource: "explicit" }),
     ]);
   });
+
+  it("keeps LIVE, merchandise, and booth lanes separate", () => {
+    const document = createEmptyDocument();
+    document.schedules = [
+      createBlankSchedule({ id: "live-a", type: "live", stage: "Main", startTime: "10:00" }),
+      createBlankSchedule({ id: "merch-a", type: "merch", booth: "A", startTime: "10:20" }),
+      createBlankSchedule({ id: "live-next", type: "live", stage: "Main", startTime: "10:40" }),
+      createBlankSchedule({ id: "merch-b", type: "merch", booth: "B", startTime: "10:50" }),
+    ];
+
+    const schedules = inferMissingEndTimes(document).schedules;
+    expect(schedules.find((item) => item.id === "live-a")?.endTime).toBe("10:40");
+    expect(schedules.find((item) => item.id === "merch-a")?.endTime).toBe("10:50");
+    expect(schedules.find((item) => item.id === "merch-b")?.endTime).toBe("11:20");
+  });
 });

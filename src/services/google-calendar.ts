@@ -1,6 +1,7 @@
 import { AppError, errorCode, errorDetails, type AppErrorCode } from "../domain/errors";
 import {
   resolveScheduleDate,
+  scheduleDisplayName,
   type ScheduleItem,
   type ScheduleType,
   type TimetableDocument,
@@ -100,9 +101,14 @@ function toGoogleEvent(
   const endDate = schedule.endsNextDay ? addDays(date, 1) : date;
   const location = schedule.stage ?? schedule.booth ?? document.event.venue ?? undefined;
   return {
-    summary: `${schedule.artist} - ${scheduleTypeLabels[schedule.type]}`,
+    summary: `${scheduleDisplayName(schedule)} - ${schedule.title && schedule.artist ? schedule.title : scheduleTypeLabels[schedule.type]}`,
     ...(location ? { location } : {}),
-    description: [document.event.name, scheduleTypeLabels[schedule.type], ...document.event.notes]
+    description: [
+      document.event.name,
+      schedule.title,
+      scheduleTypeLabels[schedule.type],
+      ...document.event.notes,
+    ]
       .filter(Boolean)
       .join("\n"),
     start: { dateTime: `${date}T${schedule.startTime}:00`, timeZone: document.event.timezone },

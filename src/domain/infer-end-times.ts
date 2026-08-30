@@ -8,7 +8,8 @@ export function inferMissingEndTimes(document: TimetableDocument): TimetableDocu
   const groups = new Map<string, ScheduleItem[]>();
   for (const schedule of document.schedules) {
     if (!schedule.startTime) continue;
-    const key = `${resolveScheduleDate(document, schedule) ?? ""}\u0000${schedule.stage ?? schedule.booth ?? ""}`;
+    const lane = schedule.stage ?? schedule.booth ?? "";
+    const key = `${resolveScheduleDate(document, schedule) ?? ""}\u0000${schedule.type}\u0000${lane}`;
     const group = groups.get(key) ?? [];
     group.push(schedule);
     groups.set(key, group);

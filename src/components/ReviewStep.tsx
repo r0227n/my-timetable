@@ -13,6 +13,7 @@ import {
 import {
   createBlankSchedule,
   resolveScheduleDate,
+  scheduleDisplayName,
   scheduleTypes,
   type ScheduleItem,
   type TimetableDocument,
@@ -84,6 +85,37 @@ export function ReviewStep({ document, sourceUrl, ocrResult, onChange, onBack, o
         item.id === id ? { ...item, ...patch, verified: patch.verified ?? false } : item,
       ),
     });
+  const linkRelatedLive = (id: string, liveId: string | null) => {
+    const current = document.schedules.find((item) => item.id === id);
+    const live = liveId
+      ? document.schedules.find((item) => item.id === liveId && item.type === "live")
+      : null;
+    if (!current) return;
+    const detached = document.schedules.map((item) =>
+      item.id === id ? { ...item, relationGroupId: null, verified: false } : item,
+    );
+    const oldGroup = current.relationGroupId;
+    const oldGroupRemaining = detached.filter((item) => item.relationGroupId === oldGroup);
+    const cleaned =
+      oldGroup && oldGroupRemaining.length < 2
+        ? detached.map((item) =>
+            item.relationGroupId === oldGroup ? { ...item, relationGroupId: null } : item,
+          )
+        : detached;
+    if (!live) {
+      onChange({ ...document, schedules: cleaned });
+      return;
+    }
+    const groupId = live.relationGroupId ?? crypto.randomUUID();
+    onChange({
+      ...document,
+      schedules: cleaned.map((item) =>
+        item.id === id || item.id === live.id
+          ? { ...item, relationGroupId: groupId, verified: item.id === id ? false : item.verified }
+          : item,
+      ),
+    });
+  };
   const duplicate = (item: ScheduleItem) => {
     const copy = { ...item, id: crypto.randomUUID(), verified: false };
     onChange({ ...document, schedules: [...document.schedules, copy] });
@@ -283,7 +315,7 @@ export function ReviewStep({ document, sourceUrl, ocrResult, onChange, onBack, o
                   >
                     <td>
                       <button className="schedule-select" type="button">
-                        {item.artist || t("scheduleFallback")}
+                        {scheduleDisplayName(item) || t("scheduleFallback")}
                       </button>
                     </td>
                     <td>{tc(`scheduleTypes.${item.type}`)}</td>
@@ -342,6 +374,7 @@ export function ReviewStep({ document, sourceUrl, ocrResult, onChange, onBack, o
               duplicates={duplicates}
               invalidRanges={invalidRanges}
               update={updateSchedule}
+              linkRelatedLive={linkRelatedLive}
               duplicate={duplicate}
               remove={remove}
               t={t}
@@ -378,6 +411,7 @@ interface DetailProps {
   duplicates: Set<string>;
   invalidRanges: Set<string>;
   update: (id: string, patch: Partial<ScheduleItem>) => void;
+  linkRelatedLive: (id: string, liveId: string | null) => void;
   duplicate: (item: ScheduleItem) => void;
   remove: (id: string) => void;
   t: TFunction<"review">;
@@ -389,6 +423,7 @@ function ScheduleDetails({
   duplicates,
   invalidRanges,
   update,
+  linkRelatedLive,
   duplicate,
   remove,
   t,
@@ -402,10 +437,18 @@ function ScheduleDetails({
         <span>{t("artist")}</span>
         <input
           aria-label={t("artist")}
-          value={item.artist}
-          onChange={(e) => update(item.id, { artist: e.target.value })}
+          value={item.artist ?? ""}
+          onChange={(e) => update(item.id, { artist: e.target.value || null })}
         />
         {duplicates.has(item.id) ? <small className="cell-warning">{t("duplicateWarning")}</small> : null}
+      </label>
+      <label>
+        <span>{t("title")}</span>
+        <input
+          aria-label={t("title")}
+          value={item.title ?? ""}
+          onChange={(e) => update(item.id, { title: e.target.value || null })}
+        />
       </label>
       <label>
         <span>{t("type")}</span>
@@ -421,6 +464,33 @@ function ScheduleDetails({
           ))}
         </select>
       </label>
+      {item.type !== "live" ? (
+        <label>
+          <span>{t("relatedLive")}</span>
+          <select
+            aria-label={t("relatedLive")}
+            value={
+              document.schedules.find(
+                (candidate) =>
+                  candidate.type === "live" &&
+                  candidate.relationGroupId &&
+                  candidate.relationGroupId === item.relationGroupId,
+              )?.id ?? ""
+            }
+            onChange={(event) => linkRelatedLive(item.id, event.target.value || null)}
+          >
+            <option value="">{t("noRelatedLive")}</option>
+            {document.schedules
+              .filter((candidate) => candidate.type === "live")
+              .map((candidate) => (
+                <option key={candidate.id} value={candidate.id}>
+                  {scheduleDisplayName(candidate) || t("scheduleFallback")} (
+                  {candidate.startTime ?? tc("unset")})
+                </option>
+              ))}
+          </select>
+        </label>
+      ) : null}
       <label>
         <span>{t("scheduleDate")}</span>
         <input
@@ -521,7 +591,7 @@ function ScheduleDetails({
       {!valid ? <p className="detail-error">{t("cannotVerify")}</p> : null}
       <label className="check-label">
         <input
-          aria-label={t("markVerified", { artist: item.artist || t("scheduleFallback") })}
+          aria-label={t("markVerified", { artist: scheduleDisplayName(item) || t("scheduleFallback") })}
           type="checkbox"
           checked={item.verified}
           disabled={!valid}
@@ -531,10 +601,10 @@ function ScheduleDetails({
       </label>
       <div className="detail-actions">
         <button type="button" className="text-button" onClick={() => duplicate(item)}>
-          <Copy size={15} /> {t("duplicate", { artist: item.artist || t("scheduleFallback") })}
+          <Copy size={15} /> {t("duplicate", { artist: scheduleDisplayName(item) || t("scheduleFallback") })}
         </button>
         <button type="button" className="text-button danger" onClick={() => remove(item.id)}>
-          <Trash2 size={15} /> {t("delete", { artist: item.artist || t("scheduleFallback") })}
+          <Trash2 size={15} /> {t("delete", { artist: scheduleDisplayName(item) || t("scheduleFallback") })}
         </button>
       </div>
     </div>

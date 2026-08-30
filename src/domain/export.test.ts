@@ -112,6 +112,53 @@ describe("timeline export", () => {
     expect(ics).not.toContain("Later");
   });
 
+  it("exports artist-less common schedules and composite activity titles", () => {
+    const common = createBlankSchedule({
+      id: "common-merch",
+      artist: null,
+      title: "終演後物販",
+      type: "merch",
+      startTime: "21:35",
+      endTime: "22:55",
+      booth: "A",
+    });
+    const composite = createBlankSchedule({
+      id: "idol-merch",
+      artist: "Idol A",
+      title: "物販・特典会",
+      type: "meet_and_greet",
+      startTime: "10:10",
+      endTime: "11:30",
+      booth: "B",
+    });
+
+    const ics = buildIcsCalendar(document, [common, composite], scheduleTypeLabels);
+    expect(ics).toContain("SUMMARY:終演後物販 - Merch");
+    expect(ics).toContain("SUMMARY:Idol A - 物販・特典会");
+    expect(ics).toContain("LOCATION:A");
+    expect(ics).toContain("LOCATION:B");
+    expect(
+      buildTimelineSvg(
+        document,
+        [common],
+        {
+          width: 1080,
+          height: 1350,
+          background: "#fff",
+          accent: "#000",
+          title: "",
+          layout: "vertical",
+          showDate: true,
+          showVenue: true,
+          showType: true,
+          showStage: true,
+          showBooth: true,
+        },
+        exportLabels,
+      ),
+    ).toContain("終演後物販");
+  });
+
   it("creates a filesystem-safe default name", () => {
     expect(createExportFileName(document)).toBe("Example-Festival-2026-08-27-my-timetable");
   });

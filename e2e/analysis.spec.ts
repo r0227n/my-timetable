@@ -19,9 +19,12 @@ test("analyzes an uploaded timetable and opens review", async ({ page }, testInf
   expect(await rows.count()).toBeGreaterThan(0);
   await expect(rows.first().locator(".schedule-select")).not.toHaveText("");
   if (fake) {
-    await expect(rows).toHaveCount(2);
+    await expect(rows).toHaveCount(5);
     await expect(rows.nth(0).locator(".schedule-select")).toHaveText("ALPHA");
     await expect(rows.nth(1).locator(".schedule-select")).toHaveText("ベータ");
+    await expect(rows.nth(2).locator(".schedule-select")).toHaveText("Idol A");
+    await expect(rows.nth(3).locator(".schedule-select")).toHaveText("Idol A");
+    await expect(rows.nth(4).locator(".schedule-select")).toHaveText("終演後物販");
     await expect(page.locator(".source-region-overlay rect")).toHaveCount(1);
     await expect(page.locator(".ocr-evidence")).toContainText("10:00 ALPHA");
     await expect(page.locator(".ocr-evidence")).toContainText("98%");
