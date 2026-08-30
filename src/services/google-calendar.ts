@@ -17,6 +17,7 @@ export interface GoogleCalendarEvent {
 export interface GoogleCalendarAdapter {
   authorize(): Promise<string>;
   insertEvent(accessToken: string, event: GoogleCalendarEvent): Promise<void>;
+  clearAuthorization?(): void;
 }
 
 export interface CalendarRegistrationResult {
@@ -38,27 +39,33 @@ export async function registerSchedulesWithGoogleCalendar(
     throw new AppError("googleDateRequired");
   }
   const accessToken = registerable.length ? await adapter.authorize() : "";
-  return await Promise.all(
-    registerable.map(async (schedule): Promise<CalendarRegistrationResult> => {
-      try {
-        await adapter.insertEvent(accessToken, toGoogleEvent(document, schedule, scheduleTypeLabels));
-        return { scheduleId: schedule.id, success: true, messageCode: "registrationSuccess" };
-      } catch (error) {
-        return {
-          scheduleId: schedule.id,
-          success: false,
-          messageCode: "registrationFailed",
-          errorCode: errorCode(error, "googleRegistrationFailed"),
-          errorDetails: errorDetails(error),
-        };
-      }
-    }),
-  );
+  try {
+    return await Promise.all(
+      registerable.map(async (schedule): Promise<CalendarRegistrationResult> => {
+        try {
+          await adapter.insertEvent(accessToken, toGoogleEvent(document, schedule, scheduleTypeLabels));
+          return { scheduleId: schedule.id, success: true, messageCode: "registrationSuccess" };
+        } catch (error) {
+          return {
+            scheduleId: schedule.id,
+            success: false,
+            messageCode: "registrationFailed",
+            errorCode: errorCode(error, "googleRegistrationFailed"),
+            errorDetails: errorDetails(error),
+          };
+        }
+      }),
+    );
+  } finally {
+    adapter.clearAuthorization?.();
+  }
 }
 
 export function createBrowserGoogleCalendarAdapter(clientId: string): GoogleCalendarAdapter {
+  const authorization = new MemoryAuthorization();
   return {
     async authorize() {
+      authorization.clear();
       await loadGoogleIdentityServices();
       return await new Promise<string>((resolve, reject) => {
         const tokenClient = window.google!.accounts.oauth2.initTokenClient({
@@ -66,17 +73,23 @@ export function createBrowserGoogleCalendarAdapter(clientId: string): GoogleCale
           scope: "https://www.googleapis.com/auth/calendar.events",
           callback: (response) => {
             if (response.error || !response.access_token) {
+              authorization.clear();
               reject(new AppError("googleAuthFailed"));
               return;
             }
-            resolve(response.access_token);
+            authorization.set(response.access_token, response.expires_in);
+            resolve(authorization.requireActive());
           },
-          error_callback: () => reject(new AppError("googleAuthCancelled")),
+          error_callback: () => {
+            authorization.clear();
+            reject(new AppError("googleAuthCancelled"));
+          },
         });
         tokenClient.requestAccessToken({ prompt: "consent" });
       });
     },
     async insertEvent(accessToken, event) {
+      if (authorization.requireActive() !== accessToken) throw new AppError("googleAuthFailed");
       const response = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events", {
         method: "POST",
         headers: {
@@ -87,7 +100,33 @@ export function createBrowserGoogleCalendarAdapter(clientId: string): GoogleCale
       });
       if (!response.ok) throw new AppError("googleInsertFailed", { status: response.status });
     },
+    clearAuthorization() {
+      authorization.clear();
+    },
   };
+}
+
+class MemoryAuthorization {
+  private accessToken: string | null = null;
+  private expiresAt = 0;
+
+  set(accessToken: string, expiresInSeconds: number | undefined): void {
+    this.accessToken = accessToken;
+    this.expiresAt = Date.now() + Math.max(0, expiresInSeconds ?? 0) * 1_000;
+  }
+
+  requireActive(): string {
+    if (!this.accessToken || Date.now() >= this.expiresAt) {
+      this.clear();
+      throw new AppError("googleAuthFailed");
+    }
+    return this.accessToken;
+  }
+
+  clear(): void {
+    this.accessToken = null;
+    this.expiresAt = 0;
+  }
 }
 
 function toGoogleEvent(
@@ -155,6 +194,7 @@ function loadGoogleIdentityServices(): Promise<void> {
 
 interface GoogleTokenResponse {
   access_token?: string;
+  expires_in?: number;
   error?: string;
   error_description?: string;
 }
