@@ -42,9 +42,9 @@ export function ReviewStep({ document, sourceUrl, onChange, onBack, onNext }: Re
     () => document.schedules.filter((item) => matchesReviewFilter(document, item, filter)),
     [document, filter],
   );
-  const effectiveSelectedId = document.schedules.some((item) => item.id === selectedId)
+  const effectiveSelectedId = filtered.some((item) => item.id === selectedId)
     ? selectedId
-    : (filtered[0]?.id ?? document.schedules[0]?.id ?? null);
+    : (filtered[0]?.id ?? null);
   const selected = document.schedules.find((item) => item.id === effectiveSelectedId) ?? null;
   const eligible = document.schedules.filter((item) => !item.verified && canVerifySchedule(document, item));
   const selectable = selectableSchedules(document);
