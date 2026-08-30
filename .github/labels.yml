@@ -13,7 +13,7 @@ labels:
     description: 人間による内容確認と優先度判断が必要
   - name: bot:execute
     color: 0e8a16
-    description: 人間がBotへ実装、PR作成、条件成立後のmergeを許可
+    description: 将来の自動実行基盤へIssueの取得と実装を許可
   - name: bot:running
     color: 1d76db
     description: BotがIssueを取得して実行中

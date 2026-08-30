@@ -1,9 +1,0 @@
-name: my-timetable-docs-review
-version: 1.0.0
-description: docs配下を実装や一次情報と照合し、週次でレビュー・更新するHermes Bot
-distribution_owned:
-  - distribution.yaml
-  - BOTS.md
-  - config.yaml
-  - SOUL.md
-  - cron/

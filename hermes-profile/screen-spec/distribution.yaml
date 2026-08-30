@@ -1,9 +1,0 @@
-name: my-timetable-screen-spec
-version: 1.0.0
-description: GLM-OCR Webの実装と実画面を確認し、画面仕様を週次で保守するHermes Bot
-distribution_owned:
-  - distribution.yaml
-  - BOTS.md
-  - config.yaml
-  - SOUL.md
-  - cron/
