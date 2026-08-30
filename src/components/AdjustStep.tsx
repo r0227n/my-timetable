@@ -169,6 +169,7 @@ function CropOverlay({
   const startDrag = (event: React.PointerEvent<HTMLElement>, handle: CropHandle) => {
     event.preventDefault();
     event.stopPropagation();
+    event.currentTarget.focus();
     event.currentTarget.setPointerCapture(event.pointerId);
     dragRef.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY, handle };
   };

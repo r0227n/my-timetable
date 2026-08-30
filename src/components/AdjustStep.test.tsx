@@ -21,6 +21,7 @@ beforeEach(async () => {
   );
   vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(800);
   vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(500);
+  HTMLElement.prototype.setPointerCapture = vi.fn<(pointerId: number) => void>();
 });
 
 afterEach(() => vi.unstubAllGlobals());
@@ -73,5 +74,24 @@ describe("AdjustStep crop controls", () => {
     await i18n.changeLanguage("en");
     expect(screen.getByRole("button", { name: "Move crop area" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Adjust crop area top edge" })).toBeInTheDocument();
+  });
+
+  it("focuses a clicked handle so arrow keys work without tabbing", async () => {
+    const onChange = renderAdjust();
+    const image = screen.getByAltText("アップロードしたタイムテーブル");
+    Object.defineProperties(image, {
+      naturalWidth: { value: 1000 },
+      naturalHeight: { value: 500 },
+    });
+    fireEvent.load(image);
+
+    const handle = await screen.findByRole("button", { name: "切り抜き領域の右下角を調整" });
+    await userEvent.click(handle);
+    expect(handle).toHaveFocus();
+
+    await userEvent.keyboard("{Shift>}{ArrowLeft}{/Shift}");
+    expect(onChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ crop: { top: 10, right: 25, bottom: 30, left: 15 } }),
+    );
   });
 });
