@@ -6,6 +6,16 @@
     "ja": "日本語",
     "en": "English"
   },
+  "model": {
+    "label": "Gemma model",
+    "button": "Selected model: {{model}}",
+    "nextAnalysis": "Changes apply when the next analysis starts. An analysis already in progress is not changed.",
+    "unavailable": {
+      "webgpu": "Unavailable because this device does not support WebGPU.",
+      "memory": "Unavailable because this device has less than 8 GB of memory.",
+      "memory-unknown": "Unavailable because the available device memory could not be determined."
+    }
+  },
   "header": {
     "debug": "Debug",
     "clearCache": "Clear AI model cache",

@@ -1,17 +1,20 @@
 import { useRef, useState } from "react";
 import { FileImage, LockKeyhole, ShieldCheck, Sparkles, Upload } from "lucide-react";
 import { modelConfig } from "../services/model-config";
+import { gemmaModels } from "../services/model-config";
+import type { GemmaModelId } from "../services/gemma-model";
 import { validateImageFile } from "../lib/image";
 import { useTranslation } from "react-i18next";
 import type { AppErrorCode } from "../domain/errors";
 
 interface UploadStepProps {
   webGpu: boolean;
+  gemmaModel?: GemmaModelId;
   onFile: (file: File) => void;
   onManual: () => void;
 }
 
-export function UploadStep({ webGpu, onFile, onManual }: UploadStepProps) {
+export function UploadStep({ webGpu, gemmaModel = "e2b", onFile, onManual }: UploadStepProps) {
   const { t } = useTranslation("upload");
   const { t: tCommon } = useTranslation("common");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -128,7 +131,7 @@ export function UploadStep({ webGpu, onFile, onManual }: UploadStepProps) {
             <span>
               <strong>{t("firstModel")}</strong>
               <small>
-                {modelConfig.ocr.approximateSize} + {modelConfig.structuring.approximateSize}
+                {modelConfig.ocr.approximateSize} + {gemmaModels[gemmaModel].approximateSize}
               </small>
             </span>
           </div>

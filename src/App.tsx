@@ -16,6 +16,12 @@ import { analyzeTimetable, type AnalysisUpdate } from "#analysis";
 import { clearAllModelCaches } from "./services/model-cache";
 import { useTranslation } from "react-i18next";
 import { localizeError } from "./i18n/errors";
+import {
+  getE4BAvailability,
+  resolveStoredGemmaModel,
+  storeGemmaModel,
+  type GemmaModelId,
+} from "./services/gemma-model";
 
 type AnalysisState = {
   stage: "preparing" | "model" | "ocr" | "gemma" | "error";
@@ -64,11 +70,14 @@ export default function App() {
   const [dark, setDark] = useState(() => localStorage.getItem("ui.theme") === "dark");
   const [debugOpen, setDebugOpen] = useState(false);
   const webGpu = Boolean(navigator.gpu);
+  const [e4bAvailability] = useState(getE4BAvailability);
+  const [gemmaModel, setGemmaModel] = useState<GemmaModelId>(() => resolveStoredGemmaModel(e4bAvailability));
 
   useEffect(() => {
     window.document.documentElement.dataset.theme = dark ? "dark" : "light";
     localStorage.setItem("ui.theme", dark ? "dark" : "light");
   }, [dark]);
+  useEffect(() => storeGemmaModel(gemmaModel), [gemmaModel]);
   useEffect(
     () => () => {
       if (sourceUrlRef.current) URL.revokeObjectURL(sourceUrlRef.current);
@@ -93,7 +102,7 @@ export default function App() {
     try {
       const image = await renderAdjustedImage(sourceUrl, adjustments);
       replaceObjectUrl(analysisImageUrlRef, image, setAnalysisImageUrl);
-      const result = await analyzeTimetable(image, handleAnalysisUpdate, nextController.signal);
+      const result = await analyzeTimetable(image, handleAnalysisUpdate, nextController.signal, gemmaModel);
       setTimetable(result.document);
       setStep(3);
     } catch (error) {
@@ -129,6 +138,9 @@ export default function App() {
       <AppHeader
         dark={dark}
         onToggleTheme={() => setDark((value) => !value)}
+        gemmaModel={gemmaModel}
+        e4bAvailability={e4bAvailability}
+        onGemmaModelChange={setGemmaModel}
         onOpenDebug={DebugPanel ? () => setDebugOpen(true) : undefined}
         onClearModelCache={async () => {
           try {
@@ -141,13 +153,14 @@ export default function App() {
       />
       {DebugPanel && debugOpen ? (
         <Suspense fallback={null}>
-          <DebugPanel onClose={() => setDebugOpen(false)} />
+          <DebugPanel gemmaModel={gemmaModel} onClose={() => setDebugOpen(false)} />
         </Suspense>
       ) : null}
       <StepNav current={step} />
       {step === 0 ? (
         <UploadStep
           webGpu={webGpu}
+          gemmaModel={gemmaModel}
           onFile={(nextFile) => {
             replaceObjectUrl(sourceUrlRef, nextFile, setSourceUrl);
             replaceObjectUrl(analysisImageUrlRef, null, setAnalysisImageUrl);

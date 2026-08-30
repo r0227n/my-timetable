@@ -1,10 +1,49 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import App from "./App";
 
 describe("Phase 1 manual flow", () => {
   beforeEach(() => localStorage.clear());
+  afterEach(() => {
+    Reflect.deleteProperty(navigator, "gpu");
+    Reflect.deleteProperty(navigator, "deviceMemory");
+  });
+
+  it("shows the selected model and explains why E4B is unavailable", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "選択中のモデル: Gemma 4 E2B" }));
+    expect(screen.getByRole("menu", { name: "Gemmaモデル" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitemradio", { name: /Gemma 4 E4B/ })).toBeDisabled();
+    expect(screen.getByText("WebGPUに対応していないため利用できません。")).toBeInTheDocument();
+    expect(screen.getByText(/変更は次回の解析開始時から反映/)).toBeInTheDocument();
+  });
+
+  it("persists an E2B fallback when a stored E4B selection is no longer available", async () => {
+    localStorage.setItem("ui.gemmaModel", "e4b");
+    render(<App />);
+
+    expect(screen.getByRole("button", { name: "選択中のモデル: Gemma 4 E2B" })).toBeInTheDocument();
+    await waitFor(() => expect(localStorage.getItem("ui.gemmaModel")).toBe("e2b"));
+  });
+
+  it("selects and restores E4B on a capable device", async () => {
+    Object.defineProperty(navigator, "gpu", { configurable: true, value: {} });
+    Object.defineProperty(navigator, "deviceMemory", { configurable: true, value: 8 });
+    const user = userEvent.setup();
+    const view = render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "選択中のモデル: Gemma 4 E2B" }));
+    await user.click(screen.getByRole("menuitemradio", { name: /Gemma 4 E4B/ }));
+    expect(screen.getByRole("button", { name: "選択中のモデル: Gemma 4 E4B" })).toHaveFocus();
+    expect(localStorage.getItem("ui.gemmaModel")).toBe("e4b");
+
+    view.unmount();
+    render(<App />);
+    expect(screen.getByRole("button", { name: "選択中のモデル: Gemma 4 E4B" })).toBeInTheDocument();
+  });
 
   it("allows manual editing and schedule selection without WebGPU", async () => {
     const user = userEvent.setup();
@@ -87,6 +126,36 @@ describe("Phase 1 manual flow", () => {
     expect(screen.getByLabelText("注記")).toBeInTheDocument();
     expect(screen.getByLabelText("相対時刻表現")).toBeInTheDocument();
     expect(screen.getByLabelText("撮影等の属性")).toBeInTheDocument();
+  });
+
+  it("aligns the type and schedule date controls with their table headers in both languages", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole("button", { name: "画像を使わず手入力ではじめる" }));
+    await screen.findByLabelText("出演者名");
+
+    const expectColumnAlignment = (typeHeader: string, dateHeader: string) => {
+      const table = screen.getByRole("table");
+      const headers = within(table).getAllByRole("columnheader");
+      const cells = within(within(table).getAllByRole("row")[1]).getAllByRole("cell");
+      const typeColumn = headers.findIndex((header) => header.textContent === typeHeader);
+      const dateColumn = headers.findIndex((header) => header.textContent === dateHeader);
+
+      expect(typeColumn).toBeGreaterThanOrEqual(0);
+      expect(dateColumn).toBeGreaterThanOrEqual(0);
+      expect(within(cells[typeColumn]).getByRole("combobox")).toHaveAccessibleName(typeHeader);
+      expect(within(cells[dateColumn]).getByLabelText(/予定日|Schedule date/)).toHaveAttribute(
+        "type",
+        "date",
+      );
+    };
+
+    expectColumnAlignment("種別", "開催日");
+
+    await user.click(screen.getByRole("button", { name: "表示言語: 日本語" }));
+    await user.click(screen.getByRole("menuitemradio", { name: "English" }));
+    await screen.findByRole("heading", { name: "Review the extracted data" });
+    expectColumnAlignment("Type", "Date");
   });
 
   it("switches language without losing in-progress data", async () => {

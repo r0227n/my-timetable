@@ -4,12 +4,14 @@ import { X } from "lucide-react";
 import { localizeError } from "../i18n/errors";
 import { recognizeImage } from "../services/analysis";
 import { structureWithGemma } from "../services/gemma";
+import type { GemmaModelId } from "../services/gemma-model";
 
 interface DebugPanelProps {
+  gemmaModel: GemmaModelId;
   onClose: () => void;
 }
 
-export function DebugPanel({ onClose }: DebugPanelProps) {
+export function DebugPanel({ gemmaModel, onClose }: DebugPanelProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const controllerRef = useRef<AbortController | null>(null);
   const [image, setImage] = useState<File | null>(null);
@@ -67,6 +69,7 @@ export function DebugPanel({ onClose }: DebugPanelProps) {
         input,
         ({ progress }) => setStatus(`Gemma: ${formatProgress(progress)}`),
         controller.signal,
+        gemmaModel,
       );
       setGemmaJson(JSON.stringify(result, null, 2));
       setStatus("Gemma: 完了");
