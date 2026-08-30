@@ -15,7 +15,9 @@ export const scheduleTypeSchema = z.enum(scheduleTypes);
 
 export const scheduleItemSchema = z.object({
   id: z.string().min(1),
-  artist: z.string(),
+  artist: z.string().nullable(),
+  title: z.string().nullable(),
+  relationGroupId: z.string().nullable(),
   type: scheduleTypeSchema,
   date: z
     .string()
@@ -48,7 +50,7 @@ export const scheduleItemSchema = z.object({
 });
 
 export const timetableDocumentSchema = z.object({
-  schemaVersion: z.literal(2),
+  schemaVersion: z.literal(3),
   event: z.object({
     name: z.string(),
     date: z
@@ -72,7 +74,9 @@ export type TimetableDocument = z.infer<typeof timetableDocumentSchema>;
 export function createBlankSchedule(overrides: Partial<ScheduleItem> = {}): ScheduleItem {
   return {
     id: crypto.randomUUID(),
-    artist: "",
+    artist: null,
+    title: null,
+    relationGroupId: null,
     type: "live",
     date: null,
     startTime: null,
@@ -92,7 +96,7 @@ export function createBlankSchedule(overrides: Partial<ScheduleItem> = {}): Sche
 
 export function createEmptyDocument(): TimetableDocument {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     event: {
       name: "",
       date: null,
@@ -108,4 +112,8 @@ export function createEmptyDocument(): TimetableDocument {
 
 export function resolveScheduleDate(document: TimetableDocument, schedule: ScheduleItem): string | null {
   return schedule.date ?? document.event.date;
+}
+
+export function scheduleDisplayName(schedule: ScheduleItem): string {
+  return schedule.artist?.trim() || schedule.title?.trim() || "";
 }

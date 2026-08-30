@@ -1,5 +1,10 @@
 import { findInvalidTimeRangeIds } from "./conflicts";
-import { resolveScheduleDate, type ScheduleItem, type TimetableDocument } from "./timetable";
+import {
+  resolveScheduleDate,
+  scheduleDisplayName,
+  type ScheduleItem,
+  type TimetableDocument,
+} from "./timetable";
 
 export type ReviewFilter = "all" | "needs_review" | "verified";
 
@@ -7,7 +12,7 @@ export function isScheduleComplete(document: TimetableDocument, item: ScheduleIt
   const hasTime = Boolean(item.startTime && item.endTime);
   const hasRelativeTime = Boolean(item.relativeTimeLabel?.trim()) && !item.startTime && !item.endTime;
   return (
-    Boolean(item.artist.trim()) &&
+    Boolean(scheduleDisplayName(item)) &&
     Boolean(resolveScheduleDate(document, item)) &&
     (hasRelativeTime || hasTime) &&
     !findInvalidTimeRangeIds([item]).has(item.id)

@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { detectConflicts, findInvalidTimeRangeIds } from "../domain/conflicts";
 import {
   resolveScheduleDate,
+  scheduleDisplayName,
   scheduleTypes,
   type ScheduleType,
   type TimetableDocument,
@@ -34,12 +35,14 @@ export function SelectionStep({ document, selected, onSelectedChange, onBack, on
   );
   const filtered = useMemo(
     () =>
-      document.schedules.filter(
-        (item) =>
-          item.artist.toLocaleLowerCase().includes(deferredQuery.toLocaleLowerCase()) &&
-          (type === "all" || item.type === type) &&
-          (stage === "all" || item.stage === stage),
-      ),
+      document.schedules.filter((item) => {
+        const queryMatches = [item.artist, item.title]
+          .filter((value): value is string => Boolean(value))
+          .some((value) => value.toLocaleLowerCase().includes(deferredQuery.toLocaleLowerCase()));
+        return (
+          queryMatches && (type === "all" || item.type === type) && (stage === "all" || item.stage === stage)
+        );
+      }),
     [deferredQuery, document.schedules, stage, type],
   );
   const selectedItems = document.schedules.filter((item) => selected.has(item.id));
@@ -49,7 +52,10 @@ export function SelectionStep({ document, selected, onSelectedChange, onBack, on
     ...conflicts.flatMap((item) => [item.firstId, item.secondId]),
     ...invalidTimeRanges,
   ]);
-  const artists = [...new Set(filtered.map((item) => item.artist))];
+  const artists = [
+    ...new Set(filtered.map((item) => item.artist).filter((artist): artist is string => Boolean(artist))),
+  ];
+  const otherSchedules = filtered.filter((item) => !item.artist);
 
   const toggle = (id: string) => {
     const next = new Set(selected);
@@ -59,6 +65,17 @@ export function SelectionStep({ document, selected, onSelectedChange, onBack, on
   };
   const toggleArtist = (artist: string) => {
     const ids = document.schedules.filter((item) => item.artist === artist).map((item) => item.id);
+    const allSelected = ids.every((id) => selected.has(id));
+    const next = new Set(selected);
+    ids.forEach((id) => (allSelected ? next.delete(id) : next.add(id)));
+    onSelectedChange(next);
+  };
+  const toggleRelated = (itemId: string) => {
+    const item = document.schedules.find((candidate) => candidate.id === itemId);
+    if (!item?.relationGroupId) return;
+    const ids = document.schedules
+      .filter((candidate) => candidate.relationGroupId === item.relationGroupId)
+      .map((candidate) => candidate.id);
     const allSelected = ids.every((id) => selected.has(id));
     const next = new Set(selected);
     ids.forEach((id) => (allSelected ? next.delete(id) : next.add(id)));
@@ -122,7 +139,9 @@ export function SelectionStep({ document, selected, onSelectedChange, onBack, on
           {artists.length ? (
             artists.map((artist) => {
               const items = filtered.filter((item) => item.artist === artist);
-              const allSelected = items.every((item) => selected.has(item.id));
+              const allSelected = document.schedules
+                .filter((item) => item.artist === artist)
+                .every((item) => selected.has(item.id));
               return (
                 <article className="artist-group panel" key={artist}>
                   <header>
@@ -146,42 +165,80 @@ export function SelectionStep({ document, selected, onSelectedChange, onBack, on
                         ),
                       )
                       .map((item) => (
-                        <label
-                          className={`schedule-card ${selected.has(item.id) ? "selected" : ""} ${conflictIds.has(item.id) ? "conflict" : ""}`}
-                          key={item.id}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selected.has(item.id)}
-                            onChange={() => toggle(item.id)}
-                          />
-                          <span className={`type-stripe ${item.type}`} />
-                          <span className="schedule-time">
-                            <small>{resolveScheduleDate(document, item) ?? tCommon("unset")}</small>
-                            {item.startTime ?? tCommon("unset")}
-                            <small>{item.endTime ? `– ${item.endTime}` : ""}</small>
-                          </span>
-                          <span className="schedule-meta">
-                            <strong>{tCommon(`scheduleTypes.${item.type}`)}</strong>
-                            <small>
-                              {[item.stage, item.booth].filter(Boolean).join(" / ") || t("unsetPlace")}
-                            </small>
-                          </span>
-                          {conflictIds.has(item.id) ? (
-                            <AlertTriangle
-                              size={18}
-                              aria-label={invalidTimeRanges.has(item.id) ? t("invalidRange") : t("overlap")}
+                        <div className="schedule-card-row" key={item.id}>
+                          <label
+                            className={`schedule-card ${selected.has(item.id) ? "selected" : ""} ${conflictIds.has(item.id) ? "conflict" : ""}`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selected.has(item.id)}
+                              onChange={() => toggle(item.id)}
                             />
+                            <span className={`type-stripe ${item.type}`} />
+                            <span className="schedule-time">
+                              <small>{resolveScheduleDate(document, item) ?? tCommon("unset")}</small>
+                              {item.startTime ?? tCommon("unset")}
+                              <small>{item.endTime ? `– ${item.endTime}` : ""}</small>
+                            </span>
+                            <span className="schedule-meta">
+                              <strong>{item.title ?? tCommon(`scheduleTypes.${item.type}`)}</strong>
+                              <small>
+                                {[item.stage, item.booth].filter(Boolean).join(" / ") || t("unsetPlace")}
+                              </small>
+                            </span>
+                            {conflictIds.has(item.id) ? (
+                              <AlertTriangle
+                                size={18}
+                                aria-label={invalidTimeRanges.has(item.id) ? t("invalidRange") : t("overlap")}
+                              />
+                            ) : null}
+                          </label>
+                          {item.relationGroupId ? (
+                            <button
+                              className="text-button"
+                              type="button"
+                              onClick={() => toggleRelated(item.id)}
+                            >
+                              {t("toggleRelated")}
+                            </button>
                           ) : null}
-                        </label>
+                        </div>
                       ))}
                   </div>
                 </article>
               );
             })
-          ) : (
+          ) : !otherSchedules.length ? (
             <div className="empty-state panel">{t("empty")}</div>
-          )}
+          ) : null}
+          {otherSchedules.length ? (
+            <article className="artist-group panel">
+              <header>
+                <strong>{t("otherSchedules")}</strong>
+              </header>
+              <div className="schedule-cards">
+                {otherSchedules.map((item) => (
+                  <label
+                    className={`schedule-card ${selected.has(item.id) ? "selected" : ""} ${conflictIds.has(item.id) ? "conflict" : ""}`}
+                    key={item.id}
+                  >
+                    <input type="checkbox" checked={selected.has(item.id)} onChange={() => toggle(item.id)} />
+                    <span className={`type-stripe ${item.type}`} />
+                    <span className="schedule-time">
+                      <small>{resolveScheduleDate(document, item) ?? tCommon("unset")}</small>
+                      {item.startTime ?? item.relativeTimeLabel ?? tCommon("unset")}
+                      <small>{item.endTime ? `– ${item.endTime}` : ""}</small>
+                    </span>
+                    <span className="schedule-meta">
+                      <strong>{scheduleDisplayName(item) || t("unnamed")}</strong>
+                      <small>{tCommon(`scheduleTypes.${item.type}`)}</small>
+                    </span>
+                    {conflictIds.has(item.id) ? <AlertTriangle size={18} aria-label={t("overlap")} /> : null}
+                  </label>
+                ))}
+              </div>
+            </article>
+          ) : null}
         </section>
         <aside className="selection-summary panel">
           <span className="eyebrow">{t("summaryEyebrow")}</span>
@@ -201,7 +258,7 @@ export function SelectionStep({ document, selected, onSelectedChange, onBack, on
                       {item.startTime ?? tCommon("unset")}
                     </time>
                     <span>
-                      <strong>{item.artist}</strong>
+                      <strong>{scheduleDisplayName(item)}</strong>
                       <small>
                         {tCommon(scheduleTypeKey(item.type))} · {item.stage ?? item.booth ?? t("unsetPlace")}
                       </small>

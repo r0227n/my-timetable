@@ -12,10 +12,11 @@ const complete = createBlankSchedule({
 });
 
 describe("schedule review rules", () => {
-  it("requires an artist, date, and a consistent absolute or relative time", () => {
+  it("requires an artist or title, date, and a consistent absolute or relative time", () => {
     const document = { ...createEmptyDocument(), schedules: [complete] };
     expect(canVerifySchedule(document, complete)).toBe(true);
     expect(canVerifySchedule(document, { ...complete, artist: "" })).toBe(false);
+    expect(canVerifySchedule(document, { ...complete, artist: null, title: "終演後物販" })).toBe(true);
     expect(canVerifySchedule(document, { ...complete, date: null })).toBe(false);
     expect(canVerifySchedule(document, { ...complete, endTime: "09:00" })).toBe(false);
     expect(

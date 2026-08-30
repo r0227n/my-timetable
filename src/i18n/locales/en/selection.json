@@ -14,6 +14,8 @@
   "unnamed": "No name",
   "artistScheduleCount_one": "{{formattedCount}} schedule",
   "artistScheduleCount_other": "{{formattedCount}} schedules",
+  "toggleRelated": "Toggle related schedules",
+  "otherSchedules": "Other schedules",
   "unsetPlace": "No location",
   "invalidRange": "The end time is not after the start time",
   "overlap": "This schedule overlaps another",

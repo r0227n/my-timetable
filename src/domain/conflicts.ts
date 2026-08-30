@@ -1,4 +1,4 @@
-import type { ScheduleItem } from "./timetable";
+import { scheduleDisplayName, type ScheduleItem } from "./timetable";
 
 export interface ScheduleConflict {
   firstId: string;
@@ -64,8 +64,9 @@ export function findDuplicateIds(items: ScheduleItem[], defaultDate: string | nu
   const seen = new Map<string, string>();
   const duplicates = new Set<string>();
   for (const item of items) {
-    const key = `${item.artist.trim().toLocaleLowerCase()}|${item.date ?? defaultDate ?? ""}|${item.type}|${item.startTime ?? ""}|${item.endTime ?? ""}|${item.endsNextDay}`;
-    if (!item.artist.trim()) continue;
+    const name = scheduleDisplayName(item);
+    const key = `${name.toLocaleLowerCase()}|${item.date ?? defaultDate ?? ""}|${item.type}|${item.startTime ?? ""}|${item.endTime ?? ""}|${item.endsNextDay}`;
+    if (!name) continue;
     const first = seen.get(key);
     if (first) {
       duplicates.add(first);

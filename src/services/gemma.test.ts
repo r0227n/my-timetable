@@ -8,7 +8,7 @@ import {
 } from "./gemma";
 
 const valid = {
-  schemaVersion: 2,
+  schemaVersion: 3,
   event: {
     name: "Festival",
     date: null,
@@ -22,6 +22,8 @@ const valid = {
     {
       id: "1",
       artist: "Artist",
+      title: null,
+      relationGroupId: null,
       type: "live",
       date: null,
       startTime: "10:00",
@@ -321,8 +323,32 @@ describe("createGemmaUserPrompt", () => {
       ],
     });
 
-    expect(prompt).toContain('"time":"12:30","text":"yours jz"');
-    expect(prompt).toContain('"time":"13:30","text":"ファジーデイズ"');
+    expect(prompt).toContain('"startTime":"12:30","endTime":null,"artist":"yours jz"');
+    expect(prompt).toContain('"startTime":"13:30","endTime":null,"artist":"ファジーデイズ"');
+  });
+
+  it("describes LIVE and merchandise rows as separate related candidates without inventing IDs", () => {
+    const prompt = createGemmaUserPrompt({
+      engine: "glm-ocr",
+      image: { width: 100, height: 200 },
+      text: "",
+      regions: [
+        {
+          id: "column-1",
+          kind: "column",
+          text: "09:30〜09:50 unFinale Tokyo 物販・特典会 Ⓐ10:10〜11:30\n21:35〜22:55 終演後物販",
+          order: 0,
+          confidence: null,
+          region: { x: 0, y: 0, width: 100, height: 200 },
+        },
+      ],
+    });
+
+    expect(prompt).toContain('"artist":"unFinale Tokyo","title":null,"type":"live"');
+    expect(prompt).toContain('"artist":"unFinale Tokyo","title":"物販・特典会","type":"meet_and_greet"');
+    expect(prompt).toContain('"booth":"A"');
+    expect(prompt).toContain('"artist":null,"title":"終演後物販","type":"merch"');
+    expect(prompt).not.toContain('"relationGroupId"');
   });
 
   it("preserves OCR content beyond the previous truncation boundary", () => {
@@ -349,6 +375,30 @@ describe("createGemmaUserPrompt", () => {
 });
 
 describe("finalizeGemmaDocument", () => {
+  it("normalizes model relationship indexes into application-owned opaque group IDs", () => {
+    const result = parseGemmaDocument(
+      JSON.stringify({
+        ...valid,
+        schedules: [
+          { ...valid.schedules[0], relatedScheduleIndexes: [1] },
+          {
+            ...valid.schedules[0],
+            id: "2",
+            type: "merch",
+            startTime: "10:40",
+            endTime: "11:30",
+            booth: "A",
+            relatedScheduleIndexes: [0],
+            relationGroupId: "model-controlled-id",
+          },
+        ],
+      }),
+    );
+
+    expect(result.schedules.map((item) => item.relationGroupId)).toEqual(["relation-1", "relation-1"]);
+    expect(result.schedules.map((item) => item.relationGroupId)).not.toContain("model-controlled-id");
+  });
+
   it("recovers every clear time and artist pair when Gemma returns only an empty first item", () => {
     const overview = { x: 0, y: 0, width: 199, height: 804 };
     const column = { x: 46, y: 0, width: 153, height: 804 };

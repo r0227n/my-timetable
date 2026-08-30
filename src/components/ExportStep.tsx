@@ -7,7 +7,7 @@ import {
   isCalendarScheduleExportable,
   type TimelineOptions,
 } from "../domain/export";
-import type { ScheduleItem, TimetableDocument } from "../domain/timetable";
+import { scheduleDisplayName, type ScheduleItem, type TimetableDocument } from "../domain/timetable";
 import { downloadBlob, svgToPngBlob } from "../lib/download";
 import {
   createBrowserGoogleCalendarAdapter,
@@ -205,7 +205,7 @@ export function ExportStep({ document, schedules, options, onBack }: ExportStepP
               <ul>
                 {registerableSchedules.map((schedule) => (
                   <li key={schedule.id}>
-                    {schedule.startTime ?? tCommon("unset")} {schedule.artist}
+                    {schedule.startTime ?? tCommon("unset")} {scheduleDisplayName(schedule)}
                   </li>
                 ))}
               </ul>
@@ -230,7 +230,7 @@ export function ExportStep({ document, schedules, options, onBack }: ExportStepP
                   const schedule = schedules.find((item) => item.id === result.scheduleId);
                   return (
                     <li className={result.success ? "success" : "failure"} key={result.scheduleId}>
-                      {schedule?.artist ?? result.scheduleId}:{" "}
+                      {(schedule && scheduleDisplayName(schedule)) || result.scheduleId}:{" "}
                       {result.success
                         ? t(result.messageCode)
                         : tCommon(
