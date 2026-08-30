@@ -61,7 +61,15 @@ export function ReviewStep({ document, sourceUrl, onChange, onBack, onNext }: Re
   const updateEvent = <K extends keyof TimetableDocument["event"]>(
     key: K,
     value: TimetableDocument["event"][K],
-  ) => onChange({ ...document, event: { ...document.event, [key]: value } });
+  ) =>
+    onChange({
+      ...document,
+      event: { ...document.event, [key]: value },
+      schedules:
+        key === "date" && value !== document.event.date
+          ? document.schedules.map((item) => (item.date === null ? { ...item, verified: false } : item))
+          : document.schedules,
+    });
   const updateSchedule = (id: string, patch: Partial<ScheduleItem>) =>
     onChange({
       ...document,
