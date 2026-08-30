@@ -5,7 +5,7 @@ export type ReviewFilter = "all" | "needs_review" | "verified";
 
 export function isScheduleComplete(document: TimetableDocument, item: ScheduleItem): boolean {
   const hasTime = Boolean(item.startTime && item.endTime);
-  const hasRelativeTime = Boolean(item.relativeTimeLabel?.trim());
+  const hasRelativeTime = Boolean(item.relativeTimeLabel?.trim()) && !item.startTime && !item.endTime;
   return (
     Boolean(item.artist.trim()) &&
     Boolean(resolveScheduleDate(document, item)) &&
