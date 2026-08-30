@@ -14,10 +14,10 @@ concurrency:
 
 jobs:
   quality:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: jdx/mise-action@v3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
         with:
           cache: true
       - run: bun install --frozen-lockfile
@@ -25,3 +25,7 @@ jobs:
       - run: bun run lint
       - run: bun run test
       - run: bun run build
+      - name: Run browser regression tests
+        uses: ./.github/actions/playwright
+        with:
+          artifact-name: playwright-report-pr

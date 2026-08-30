@@ -11,7 +11,7 @@ import { ExportStep } from "./components/ExportStep";
 import { createEmptyDocument, type TimetableDocument } from "./domain/timetable";
 import type { TimelineOptions } from "./domain/export";
 import { defaultAdjustments, renderAdjustedImage, type ImageAdjustments } from "./lib/image";
-import { analyzeTimetable, type AnalysisUpdate } from "./services/analysis";
+import { analyzeTimetable, type AnalysisUpdate } from "#analysis";
 import { clearAllModelCaches } from "./services/model-cache";
 import { useTranslation } from "react-i18next";
 import { localizeError } from "./i18n/errors";

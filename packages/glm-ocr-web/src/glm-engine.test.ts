@@ -1,11 +1,26 @@
 import { describe, expect, it, vi } from "vitest";
 import { GLM_EXTERNAL_DATA, GLM_MODEL_ID, GLM_MODEL_REVISION, OCR_ENGINES } from "./config";
-import { detectColumnBoundaries, GlmOcrEngine } from "./glm-engine";
+import { detectColumnBoundaries, fitOcrInputSize, GlmOcrEngine } from "./glm-engine";
 import { createOcrEngine } from "./index";
 import { createOcrRegions } from "./glm-engine";
 import type { OcrProgress } from "./types";
 
 describe("GLM-OCR engine configuration", () => {
+  it.each([
+    [800, 600, 800, 600],
+    [1280, 781, 1280, 781],
+    [1281, 100, 1280, 100],
+    [2000, 1000, 1280, 640],
+    [1240, 1754, 841, 1189],
+    [100_000, 1, 1280, 1],
+  ])("fits %ix%i within the OCR encoder limits as %ix%i", (width, height, expectedWidth, expectedHeight) => {
+    const result = fitOcrInputSize(width, height);
+
+    expect(result).toEqual({ width: expectedWidth, height: expectedHeight });
+    expect(Math.max(result.width, result.height)).toBeLessThanOrEqual(1280);
+    expect(result.width * result.height).toBeLessThanOrEqual(1_000_000);
+  });
+
   it("uses the complete, revision-pinned browser ONNX conversion", () => {
     expect(GLM_MODEL_ID).toBe("onnx-community/GLM-OCR-ONNX");
     expect(GLM_MODEL_REVISION).toMatch(/^[a-f0-9]{40}$/u);
@@ -99,7 +114,7 @@ describe("GLM-OCR engine configuration", () => {
   it("bounds oversized crops before vision encoding to avoid std::bad_alloc", async () => {
     vi.resetModules();
     Object.defineProperty(navigator, "gpu", { configurable: true, value: {} });
-    let processedImage: { width: number; height: number } | undefined;
+    const processedImages: Array<{ width: number; height: number }> = [];
     const processor = Object.assign(
       vi.fn<
         (
@@ -108,7 +123,7 @@ describe("GLM-OCR engine configuration", () => {
           options?: unknown,
         ) => { input_ids: { dims: number[] } }
       >((_prompt, image) => {
-        processedImage = image;
+        processedImages.push(image);
         return { input_ids: { dims: [1, 4] } };
       }),
       {
@@ -120,7 +135,11 @@ describe("GLM-OCR engine configuration", () => {
     const model = {
       dispose: vi.fn<() => Promise<void>>(async () => undefined),
       generate: vi.fn<(...args: unknown[]) => { slice: typeof slice }>(() => {
-        if (Math.max(processedImage?.width ?? 0, processedImage?.height ?? 0) > 1280) {
+        const processedImage = processedImages.at(-1);
+        if (
+          Math.max(processedImage?.width ?? 0, processedImage?.height ?? 0) > 1280 ||
+          (processedImage?.width ?? 0) * (processedImage?.height ?? 0) > 1_000_000
+        ) {
           throw new Error("failed to call OrtRun(). ERROR_CODE: 6, ERROR_MESSAGE: std::bad_alloc");
         }
         return { slice };
@@ -136,7 +155,11 @@ describe("GLM-OCR engine configuration", () => {
         fromBlob: async () => ({
           width: 1240,
           height: 1754,
-          crop: async () => ({ width: 1240, height: 1754, resize }),
+          crop: async ([left, top, right, bottom]: number[]) => ({
+            width: right - left,
+            height: bottom - top,
+            resize,
+          }),
         }),
       },
       env: { fetch: vi.fn<(input: string | URL, init?: unknown) => Promise<unknown>>() },
@@ -150,6 +173,14 @@ describe("GLM-OCR engine configuration", () => {
       ),
     ).resolves.toMatchObject({ engine: "glm-ocr" });
     expect(resize).toHaveBeenCalled();
+    expect(processedImages).toHaveLength(5);
+    expect(processedImages).toEqual([
+      { width: 841, height: 1189 },
+      { width: 298, height: 1280 },
+      { width: 371, height: 1280 },
+      { width: 371, height: 1280 },
+      { width: 298, height: 1280 },
+    ]);
   });
 
   it("covers the complete image with ordered OCR regions", () => {

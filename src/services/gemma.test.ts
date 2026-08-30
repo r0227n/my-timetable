@@ -141,7 +141,10 @@ describe("parseGemmaDocument", () => {
 
 describe("structureWithGemma", () => {
   afterEach(() => {
+    vi.doUnmock("@litert-lm/core");
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
+    delete (globalThis as typeof globalThis & { Module?: unknown }).Module;
   });
 
   it("runs through the page engine instead of an unbundled classic worker", async () => {
@@ -163,6 +166,114 @@ describe("structureWithGemma", () => {
     ).rejects.toMatchObject({ code: "gemmaWebGpuRequired" });
 
     expect(workerCreations).toBe(0);
+  });
+
+  it("configures LiteRT assets before creating a page engine and releases its resources", async () => {
+    const events: string[] = [];
+    const cancel = vi.fn<() => void>();
+    const deleteConversation = vi.fn<() => Promise<void>>(async () => undefined);
+    const sendMessage = vi.fn<() => Promise<{ content: string }>>(async () => ({
+      content: JSON.stringify(valid),
+    }));
+    const createConversation = vi.fn<
+      () => Promise<{
+        cancel: typeof cancel;
+        delete: typeof deleteConversation;
+        sendMessage: typeof sendMessage;
+      }>
+    >(async () => ({ cancel, delete: deleteConversation, sendMessage }));
+    const deleteEngine = vi.fn<() => Promise<void>>(async () => undefined);
+    const createEngine = vi.fn<
+      () => Promise<{ createConversation: typeof createConversation; delete: typeof deleteEngine }>
+    >(async () => {
+      const module = (
+        globalThis as typeof globalThis & {
+          Module?: { locateFile?: (path: string) => string };
+        }
+      ).Module;
+      events.push(module?.locateFile?.("litertlm_wasm_asyncify_internal.wasm") ?? "missing");
+      return { createConversation, delete: deleteEngine };
+    });
+    vi.doMock("@litert-lm/core", () => ({ Engine: { create: createEngine } }));
+    vi.stubGlobal("navigator", { gpu: {} });
+    vi.stubGlobal(
+      "Worker",
+      class {
+        constructor() {
+          throw new Error("Gemma must not create a classic worker");
+        }
+      },
+    );
+    vi.stubGlobal("caches", {
+      open: async () => ({
+        match: async () =>
+          new Response(new Uint8Array([1, 2, 3]), {
+            headers: { "content-length": "3" },
+          }),
+      }),
+    });
+
+    const result = await structureWithGemma(
+      { engine: "glm-ocr", image: { width: 1, height: 1 }, text: "Artist 10:00", regions: [] },
+      vi.fn(),
+      new AbortController().signal,
+    );
+
+    expect(events).toEqual([
+      "https://cdn.jsdelivr.net/npm/@litert-lm/core@0.15.0/wasm/litertlm_wasm_asyncify_internal.wasm",
+    ]);
+    expect(createEngine).toHaveBeenCalledOnce();
+    expect(sendMessage).toHaveBeenCalledOnce();
+    expect(deleteConversation).toHaveBeenCalledOnce();
+    expect(deleteEngine).toHaveBeenCalledOnce();
+    expect(result).toEqual({
+      ...valid,
+      schedules: [{ ...valid.schedules[0], id: "item-1" }],
+    });
+  });
+
+  it("cancels an active page conversation when analysis is aborted and still releases resources", async () => {
+    const controller = new AbortController();
+    const cancel = vi.fn<() => void>();
+    const deleteConversation = vi.fn<() => Promise<void>>(async () => undefined);
+    const deleteEngine = vi.fn<() => Promise<void>>(async () => undefined);
+    const sendMessage = vi.fn<() => Promise<never>>(
+      () =>
+        new Promise<never>((_resolve, reject) => {
+          controller.signal.addEventListener(
+            "abort",
+            () => reject(new DOMException("Aborted", "AbortError")),
+            {
+              once: true,
+            },
+          );
+        }),
+    );
+    vi.doMock("@litert-lm/core", () => ({
+      Engine: {
+        create: async () => ({
+          createConversation: async () => ({ cancel, delete: deleteConversation, sendMessage }),
+          delete: deleteEngine,
+        }),
+      },
+    }));
+    vi.stubGlobal("navigator", { gpu: {} });
+    vi.stubGlobal("caches", {
+      open: async () => ({ match: async () => new Response(new Uint8Array([1])) }),
+    });
+
+    const analysis = structureWithGemma(
+      { engine: "glm-ocr", image: { width: 1, height: 1 }, text: "Artist 10:00", regions: [] },
+      vi.fn(),
+      controller.signal,
+    );
+    await vi.waitFor(() => expect(sendMessage).toHaveBeenCalledOnce());
+    controller.abort();
+
+    await expect(analysis).rejects.toMatchObject({ name: "AbortError" });
+    expect(cancel).toHaveBeenCalledOnce();
+    expect(deleteConversation).toHaveBeenCalledOnce();
+    expect(deleteEngine).toHaveBeenCalledOnce();
   });
 });
 

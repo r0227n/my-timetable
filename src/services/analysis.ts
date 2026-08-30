@@ -1,9 +1,9 @@
 import type { TimetableDocument } from "../domain/timetable";
 import { createOcrEngine, OcrError, type OcrProgress, type OcrResult } from "@my-timetable/glm-ocr-web";
-import type { GemmaProgress } from "./gemma";
 import { AppError } from "../domain/errors";
+import type { AnalysisUpdate } from "./analysis-contract";
 
-export type AnalysisUpdate = ({ step: "ocr" } & OcrProgress) | ({ step: "gemma" } & GemmaProgress);
+export type { AnalysisUpdate } from "./analysis-contract";
 
 export async function analyzeTimetable(
   image: Blob,

@@ -1,0 +1,31 @@
+name: Run Playwright regression tests
+description: Build the fake analysis app, install Chromium, run E2E tests, and retain failure evidence.
+
+inputs:
+  artifact-name:
+    description: Name for the failure artifact.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Build fake analysis app
+      shell: bash
+      run: bun run build:e2e:fake
+    - name: Install Chromium
+      shell: bash
+      run: bunx playwright install --with-deps chromium
+    - name: Run Playwright tests
+      shell: bash
+      env:
+        E2E_ANALYSIS_MODE: fake
+      run: bunx playwright test
+    - name: Upload Playwright failure artifacts
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: |
+          playwright-report
+          test-results
+        if-no-files-found: ignore
