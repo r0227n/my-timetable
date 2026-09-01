@@ -4,6 +4,7 @@ import {
   createGemmaUserPrompt,
   finalizeGemmaDocument,
   parseGemmaDocument,
+  parseGemmaResponse,
   structureWithGemma,
 } from "./gemma";
 
@@ -83,6 +84,17 @@ describe("parseGemmaDocument", () => {
     expect(consoleInfo).toHaveBeenLastCalledWith("[My Timetable][Gemma] Structured result", result);
   });
 
+  it("recovers complete schedules when the response is truncated inside the next schedule", () => {
+    const consoleInfo = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    const complete = JSON.stringify(valid);
+    const truncated = `${complete.slice(0, -2)},{"id":"2","artist":"unfinished`;
+
+    const result = parseGemmaDocument(truncated);
+
+    expect(result.schedules).toEqual(valid.schedules);
+    expect(consoleInfo).toHaveBeenLastCalledWith("[My Timetable][Gemma] Structured result", result);
+  });
+
   it("ignores an extra closing brace after a complete JSON document", () => {
     const consoleInfo = vi.spyOn(console, "info").mockImplementation(() => undefined);
 
@@ -139,6 +151,45 @@ describe("parseGemmaDocument", () => {
   });
 });
 
+describe("parseGemmaResponse", () => {
+  it("expands the compact successful JSON format into the domain document", () => {
+    const result = parseGemmaResponse(
+      JSON.stringify({
+        event: ["Festival", null, null, null, null, []],
+        schedules: [["Artist", "live", null, "10:00", "10:30", false, null, "Stage", null, {}, "high"]],
+      }),
+    );
+
+    expect(result).toEqual({
+      ...valid,
+      schedules: [{ ...valid.schedules[0], id: "model-1", stage: "Stage" }],
+    });
+  });
+
+  it("normalizes common compact JSON type and tuple-width deviations", () => {
+    const result = parseGemmaResponse(
+      JSON.stringify({
+        event: ["Festival", null, null, null, null, "[]"],
+        schedules: [["Artist", "live", null, "10:00", "10:30", false, null, "Stage", null, null, {}, "low"]],
+      }),
+    );
+
+    expect(result.event.notes).toEqual([]);
+    expect(result.schedules[0]).toMatchObject({
+      artist: "Artist",
+      stage: "Stage",
+      booth: null,
+      attributes: {},
+    });
+  });
+
+  it("rejects malformed compact JSON instead of coercing it into blank schedules", () => {
+    expect(() => parseGemmaResponse(JSON.stringify({ event: [], schedules: [["Artist"]] }))).toThrowError(
+      expect.objectContaining({ code: "gemmaInvalidData" }),
+    );
+  });
+});
+
 describe("structureWithGemma", () => {
   afterEach(() => {
     vi.doUnmock("@litert-lm/core");
@@ -173,7 +224,10 @@ describe("structureWithGemma", () => {
     const cancel = vi.fn<() => void>();
     const deleteConversation = vi.fn<() => Promise<void>>(async () => undefined);
     const sendMessage = vi.fn<() => Promise<{ content: string }>>(async () => ({
-      content: JSON.stringify(valid),
+      content: JSON.stringify({
+        event: ["Festival", null, null, null, null, []],
+        schedules: [["Artist", "live", null, "10:00", "10:30", false, null, null, null, {}, "high"]],
+      }),
     }));
     const createConversation = vi.fn<
       () => Promise<{
@@ -231,12 +285,168 @@ describe("structureWithGemma", () => {
       "https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm/resolve/main/gemma-4-E4B-it-web.litertlm",
     );
     expect(sendMessage).toHaveBeenCalledOnce();
+    expect(createConversation).toHaveBeenCalledWith({
+      sessionConfig: {
+        maxOutputTokens: 4096,
+        samplerParams: { k: 1, seed: 0 },
+      },
+      preface: {
+        messages: [
+          {
+            role: "system",
+            content: expect.stringMatching(
+              /successful response.*"event":\["Festival".*Never output schedule items as objects/s,
+            ),
+          },
+        ],
+      },
+    });
     expect(deleteConversation).toHaveBeenCalledOnce();
     expect(deleteEngine).toHaveBeenCalledOnce();
     expect(result).toEqual({
       ...valid,
       schedules: [{ ...valid.schedules[0], id: "item-1" }],
     });
+  });
+
+  it("re-prompts with the successful JSON example when the first response is not JSON", async () => {
+    const compact = JSON.stringify({
+      event: ["Festival", null, null, null, null, []],
+      schedules: [["Artist", "live", null, "10:00", "10:30", false, null, null, null, {}, "high"]],
+    });
+    const sendMessage = vi
+      .fn<(prompt: string) => Promise<{ content: string }>>()
+      .mockResolvedValueOnce({ content: "JSONではない応答" })
+      .mockResolvedValueOnce({ content: compact });
+    const deleteConversation = vi.fn<() => Promise<void>>(async () => undefined);
+    const deleteEngine = vi.fn<() => Promise<void>>(async () => undefined);
+    const cancel = vi.fn<() => void>();
+    const createConversation = vi.fn<
+      () => Promise<{
+        cancel: typeof cancel;
+        delete: typeof deleteConversation;
+        sendMessage: typeof sendMessage;
+      }>
+    >(async () => ({
+      cancel,
+      delete: deleteConversation,
+      sendMessage,
+    }));
+    vi.doMock("@litert-lm/core", () => ({
+      Engine: {
+        create: async () => ({
+          createConversation,
+          delete: deleteEngine,
+        }),
+      },
+    }));
+    vi.stubGlobal("navigator", { gpu: {} });
+    vi.stubGlobal("caches", {
+      open: async () => ({ match: async () => new Response(new Uint8Array([1])) }),
+    });
+
+    const result = await structureWithGemma(
+      { engine: "glm-ocr", image: { width: 1, height: 1 }, text: "Artist 10:00", regions: [] },
+      vi.fn(),
+      new AbortController().signal,
+    );
+
+    expect(sendMessage).toHaveBeenCalledTimes(2);
+    expect(createConversation).toHaveBeenCalledTimes(2);
+    expect(sendMessage.mock.calls[1]?.[0]).toMatch(/前回の出力.*成功例.*"event":\["Festival"/s);
+    expect(result.schedules[0]).toMatchObject({ artist: "Artist", startTime: "10:00" });
+    expect(deleteConversation).toHaveBeenCalledTimes(2);
+    expect(deleteEngine).toHaveBeenCalledOnce();
+  });
+
+  it("re-prompts with every missing OCR stage when the first JSON covers only one stage", async () => {
+    const compact = (schedules: unknown[]) =>
+      JSON.stringify({ event: ["Festival", null, null, null, null, []], schedules });
+    const sea = ["Sea Artist", "live", null, "10:00", null, false, null, "ムロ海ステージ", null, {}, "high"];
+    const brick = [
+      "Brick Artist",
+      "live",
+      null,
+      "10:00",
+      null,
+      false,
+      null,
+      "ムロ赤レンガステージ",
+      null,
+      {},
+      "high",
+    ];
+    const grass = [
+      "Grass Artist",
+      "live",
+      null,
+      "10:00",
+      null,
+      false,
+      null,
+      "ムロ芝生ステージ",
+      null,
+      {},
+      "high",
+    ];
+    const sendMessage = vi
+      .fn<(prompt: string) => Promise<{ content: string }>>()
+      .mockResolvedValueOnce({ content: compact([sea]) })
+      .mockResolvedValueOnce({ content: compact([sea, brick, grass]) });
+    const deleteConversation = vi.fn<() => Promise<void>>(async () => undefined);
+    const deleteEngine = vi.fn<() => Promise<void>>(async () => undefined);
+    const cancel = vi.fn<() => void>();
+    const createConversation = vi.fn<
+      () => Promise<{
+        cancel: typeof cancel;
+        delete: typeof deleteConversation;
+        sendMessage: typeof sendMessage;
+      }>
+    >(async () => ({ cancel, delete: deleteConversation, sendMessage }));
+    vi.doMock("@litert-lm/core", () => ({
+      Engine: {
+        create: async () => ({ createConversation, delete: deleteEngine }),
+      },
+    }));
+    vi.stubGlobal("navigator", { gpu: {} });
+    vi.stubGlobal("caches", {
+      open: async () => ({ match: async () => new Response(new Uint8Array([1])) }),
+    });
+    const stageText = [
+      "## STAGE: ムロ海ステージ",
+      "## STAGE: ムロ赤レンガステージ",
+      "## STAGE: ムロ芝生ステージ",
+    ].join("\n");
+
+    const result = await structureWithGemma(
+      {
+        engine: "glm-ocr",
+        image: { width: 100, height: 100 },
+        text: stageText,
+        regions: [
+          {
+            id: "full-image",
+            kind: "overview",
+            text: stageText,
+            order: 0,
+            confidence: null,
+            region: { x: 0, y: 0, width: 100, height: 100 },
+          },
+        ],
+      },
+      vi.fn(),
+      new AbortController().signal,
+    );
+
+    expect(sendMessage).toHaveBeenCalledTimes(2);
+    expect(sendMessage.mock.calls[1]?.[0]).toMatch(/ムロ赤レンガステージ.*ムロ芝生ステージ/s);
+    expect(result.schedules.map(({ stage }) => stage)).toEqual([
+      "ムロ海ステージ",
+      "ムロ赤レンガステージ",
+      "ムロ芝生ステージ",
+    ]);
+    expect(deleteConversation).toHaveBeenCalledTimes(2);
+    expect(deleteEngine).toHaveBeenCalledOnce();
   });
 
   it("cancels an active page conversation when analysis is aborted and still releases resources", async () => {
@@ -321,8 +531,8 @@ describe("createGemmaUserPrompt", () => {
       ],
     });
 
-    expect(prompt).toContain('"time":"12:30","text":"yours jz"');
-    expect(prompt).toContain('"time":"13:30","text":"ファジーデイズ"');
+    expect(prompt).toContain('"time":"12:30","endTime":null,"text":"yours jz"');
+    expect(prompt).toContain('"time":"13:30","endTime":null,"text":"ファジーデイズ"');
   });
 
   it("preserves OCR content beyond the previous truncation boundary", () => {
@@ -346,9 +556,137 @@ describe("createGemmaUserPrompt", () => {
     expect(prompt).toContain(tail);
     expect(prompt.length).toBeGreaterThan(25_000);
   });
+
+  it("compacts full-image Markdown stage sections without repeating the OCR schedule rows", () => {
+    const stageText = [
+      "### ムロ海ステージ",
+      "#### LEFT STAGE",
+      "- 10:00-10:25",
+      "- kobore",
+      "### ムロ赤レンガステージ",
+      "#### RIGHT STAGE",
+      "- 10:25-10:50",
+      "- ちゃくら",
+    ].join("\n");
+    const prompt = createGemmaUserPrompt({
+      engine: "glm-ocr",
+      image: { width: 1000, height: 2000 },
+      text: stageText,
+      regions: [
+        {
+          id: "full-image",
+          kind: "overview",
+          text: stageText,
+          order: 0,
+          confidence: null,
+          region: { x: 0, y: 0, width: 1000, height: 2000 },
+        },
+      ],
+    });
+
+    expect(prompt).toContain(
+      'scheduleCandidates=[["kobore","10:00","10:25","ムロ海ステージ / LEFT STAGE"],["ちゃくら","10:25","10:50","ムロ赤レンガステージ / RIGHT STAGE"]]',
+    );
+    expect(prompt).not.toContain("ocrResult=");
+    expect(prompt.match(/kobore/gu)).toHaveLength(1);
+  });
+
+  it("compacts GLM table-recognition HTML while preserving every stage and table row", () => {
+    const table = [
+      '<table class="table table-bordered"><tbody>',
+      '<tr><th rowspan="2">TIME</th><th colspan="2">ムロ海ステージ</th><th colspan="2">ムロ赤レンガステージ</th><th colspan="2">ムロ芝生ステージ</th></tr>',
+      "<tr><th>LEFT STAGE</th><th>RIGHT STAGE</th><th>LEFT STAGE</th><th>RIGHT STAGE</th><th>LEFT STAGE</th><th>RIGHT STAGE</th></tr>",
+      "<tr><td>10:00</td><td>10:00-10:25<br>kobore</td><td>10:25-10:50<br>UNFAIR RULE</td><td>10:00-10:25<br>終活クラブ</td><td>10:25-10:50<br>ちゃくら</td><td>10:00-10:25<br>プライドの高い深夜のコンビニアルバイト</td><td>10:25-10:50<br>VOI SQUARE CAT</td></tr>",
+      "</tbody></table>",
+    ].join("");
+    const prompt = createGemmaUserPrompt({
+      engine: "glm-ocr",
+      image: { width: 1000, height: 2000 },
+      text: `[full-image overview]\n${table}`,
+      regions: [
+        {
+          id: "full-image",
+          kind: "overview",
+          text: table,
+          order: 0,
+          confidence: null,
+          region: { x: 0, y: 0, width: 1000, height: 2000 },
+        },
+      ],
+    });
+
+    expect(prompt).toContain(
+      'requiredStageHeadings=["ムロ海ステージ","ムロ赤レンガステージ","ムロ芝生ステージ"]',
+    );
+    expect(prompt).toContain('["VOI SQUARE CAT","10:25","10:50","ムロ芝生ステージ / RIGHT STAGE"]');
+    expect(prompt).toContain('["終活クラブ","10:00","10:25","ムロ赤レンガステージ / LEFT STAGE"]');
+    expect(prompt).not.toContain("table-bordered");
+    expect(prompt).not.toContain("<td>");
+  });
+
+  it("passes compact table rows instead of raw HTML when time and name use separate cells", () => {
+    const table =
+      '<table class="table table-bordered"><tr><th colspan="2">ムロ赤レンガステージ</th><th colspan="2">ムロ芝生ステージ</th></tr><tr><td>10:00-10:25</td><td>終活クラブ</td><td>10:25-10:50</td><td>VOI SQUARE CAT</td></tr></table>';
+    const prompt = createGemmaUserPrompt({
+      engine: "glm-ocr",
+      image: { width: 1000, height: 2000 },
+      text: table,
+      regions: [
+        {
+          id: "full-image",
+          kind: "overview",
+          text: table,
+          order: 0,
+          confidence: null,
+          region: { x: 0, y: 0, width: 1000, height: 2000 },
+        },
+      ],
+    });
+
+    expect(prompt).toContain(
+      'tableRows=[["ムロ赤レンガステージ [c2]","ムロ芝生ステージ [c2]"],["10:00-10:25","終活クラブ","10:25-10:50","VOI SQUARE CAT"]]',
+    );
+    expect(prompt).not.toContain("table-bordered");
+    expect(prompt).not.toContain("ocrResult=");
+  });
 });
 
 describe("finalizeGemmaDocument", () => {
+  it("recovers compact full-image rows with their parent and child stages", () => {
+    const region = { x: 0, y: 0, width: 1000, height: 2000 };
+    const stageText = ["### ムロ芝生ステージ", "#### RIGHT STAGE", "- 10:25-10:50", "- VOI SQUARE CAT"].join(
+      "\n",
+    );
+    const document = parseGemmaDocument(JSON.stringify({ ...valid, schedules: [] }));
+
+    const result = finalizeGemmaDocument(document, {
+      engine: "glm-ocr",
+      image: { width: 1000, height: 2000 },
+      text: stageText,
+      regions: [
+        {
+          id: "full-image",
+          kind: "overview",
+          text: stageText,
+          order: 0,
+          confidence: null,
+          region,
+        },
+      ],
+    });
+
+    expect(result.schedules).toEqual([
+      expect.objectContaining({
+        artist: "VOI SQUARE CAT",
+        startTime: "10:25",
+        endTime: "10:50",
+        endTimeSource: "explicit",
+        stage: "ムロ芝生ステージ / RIGHT STAGE",
+        sourceRegions: [region],
+      }),
+    ]);
+  });
+
   it("recovers every clear time and artist pair when Gemma returns only an empty first item", () => {
     const overview = { x: 0, y: 0, width: 199, height: 804 };
     const column = { x: 46, y: 0, width: 153, height: 804 };
@@ -439,7 +777,17 @@ describe("finalizeGemmaDocument", () => {
       engine: "glm-ocr",
       image: { width: 500, height: 1000 },
       text: "",
-      regions: [{ id: "column-1", kind: "column", text: "", order: 0, confidence: null, region }],
+      regions: [
+        { id: "column-1", kind: "column", text: "", order: 0, confidence: null, region },
+        {
+          id: "column-2",
+          kind: "column",
+          text: "",
+          order: 1,
+          confidence: null,
+          region: { x: 500, y: 0, width: 500, height: 1000 },
+        },
+      ],
     });
 
     expect(result.schedules[0]).toMatchObject({
@@ -454,5 +802,29 @@ describe("finalizeGemmaDocument", () => {
       endTimeSource: "inferred_default",
       sourceRegions: [],
     });
+  });
+
+  it("grounds every schedule in the sole full-image OCR region", () => {
+    const region = { x: 0, y: 0, width: 1684, height: 2382 };
+    const document = parseGemmaDocument(
+      JSON.stringify({
+        ...valid,
+        schedules: [
+          {
+            ...valid.schedules[0],
+            sourceRegions: [{ x: 1, y: 2, width: 3, height: 4 }],
+          },
+        ],
+      }),
+    );
+
+    const result = finalizeGemmaDocument(document, {
+      engine: "glm-ocr",
+      image: { width: 1684, height: 2382 },
+      text: "",
+      regions: [{ id: "full-image", kind: "overview", text: "", order: 0, confidence: null, region }],
+    });
+
+    expect(result.schedules[0]?.sourceRegions).toEqual([region]);
   });
 });
