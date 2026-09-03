@@ -1,9 +1,12 @@
 export const appErrorCodes = [
   "analysisFailed",
   "analysisNoText",
+  "modelInitializationFailed",
   "ocrWebGpuRequired",
   "ocrInvalidInput",
   "ocrInvalidOutput",
+  "ocrExecutionFailed",
+  "ocrOutputIncomplete",
   "imageInvalidType",
   "imageTooLarge",
   "imageMultipleFiles",
@@ -24,6 +27,8 @@ export const appErrorCodes = [
   "gemmaWebGpuRequired",
   "gemmaInvalidJson",
   "gemmaInvalidData",
+  "gemmaExecutionFailed",
+  "gemmaStageCoverageIncomplete",
   "gemmaDownloadFailed",
   "gemmaDataFailed",
 ] as const;

@@ -857,6 +857,31 @@ input[type="range"] {
   font-size: 13px;
   min-height: 22px;
 }
+.analysis-error-stage {
+  margin: 0 0 8px;
+  font-weight: 700;
+}
+.analysis-error-code {
+  margin: 18px 0 0;
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+}
+.analysis-diagnostics {
+  margin-top: 22px;
+  text-align: left;
+  font-size: 12px;
+}
+.analysis-diagnostics summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.analysis-diagnostics pre {
+  overflow: auto;
+  padding: 12px;
+  background: var(--surface-2);
+  white-space: pre-wrap;
+}
 .progress-track {
   width: 100%;
   height: 5px;

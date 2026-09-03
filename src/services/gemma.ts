@@ -122,7 +122,7 @@ export async function structureWithGemma(
           extractTimedTextCandidates(ocrResult),
         ).length > 0
       ) {
-        throw new AppError("gemmaInvalidData");
+        throw new AppError("gemmaStageCoverageIncomplete");
       }
       return document;
     };
@@ -132,7 +132,9 @@ export async function structureWithGemma(
     } catch (error) {
       if (
         !(error instanceof AppError) ||
-        (error.code !== "gemmaInvalidJson" && error.code !== "gemmaInvalidData")
+        (error.code !== "gemmaInvalidJson" &&
+          error.code !== "gemmaInvalidData" &&
+          error.code !== "gemmaStageCoverageIncomplete")
       ) {
         throw error;
       }

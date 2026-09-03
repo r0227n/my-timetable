@@ -43,9 +43,12 @@
   "errors": {
     "analysisFailed": "Analysis failed.",
     "analysisNoText": "No text could be read from the image. Adjust the image or continue with manual entry.",
+    "modelInitializationFailed": "The AI model could not be initialized. Retry model setup.",
     "ocrWebGpuRequired": "GLM-OCR requires the latest WebGPU-compatible Chrome or Edge.",
     "ocrInvalidInput": "GLM-OCR could not prepare the image input. Adjust the image and try again.",
     "ocrInvalidOutput": "GLM-OCR returned an invalid output format. Adjust the image and try again.",
+    "ocrExecutionFailed": "A problem occurred while GLM-OCR was running. Retry OCR.",
+    "ocrOutputIncomplete": "Schedules across the whole image could not be recognized. Adjust the image and retry.",
     "imageInvalidType": "Select a JPEG, PNG, or WebP image.",
     "imageTooLarge": "The image must be 20 MB or smaller.",
     "imageMultipleFiles": "Select only one image.",
@@ -66,6 +69,8 @@
     "gemmaWebGpuRequired": "Gemma requires Chrome or Edge with WebGPU support.",
     "gemmaInvalidJson": "Gemma's response could not be read as JSON. You can correct it manually.",
     "gemmaInvalidData": "Gemma's response contains unresolved fields. Correct them manually.",
+    "gemmaExecutionFailed": "A problem occurred while Gemma was running. You can retry while keeping the OCR result.",
+    "gemmaStageCoverageIncomplete": "Gemma's result is missing one or more recognized stages. Retry Gemma.",
     "gemmaDownloadFailed": "The Gemma model could not be downloaded. Check your connection.",
     "gemmaDataFailed": "The Gemma model data could not be read."
   }
