@@ -43,9 +43,12 @@
   "errors": {
     "analysisFailed": "解析に失敗しました。",
     "analysisNoText": "画像から文字を読み取れませんでした。画像を調整するか、手入力をお試しください。",
+    "modelInitializationFailed": "AIモデルを初期化できませんでした。モデル取得を再試行してください。",
     "ocrWebGpuRequired": "GLM-OCRにはWebGPU対応の最新版ChromeまたはEdgeが必要です。",
     "ocrInvalidInput": "GLM-OCRの入力を生成できませんでした。画像を調整して再試行してください。",
     "ocrInvalidOutput": "GLM-OCRの出力形式が不正です。画像を調整して再試行してください。",
+    "ocrExecutionFailed": "GLM-OCRの実行中に問題が発生しました。OCRを再試行してください。",
+    "ocrOutputIncomplete": "画像全体の予定を認識できませんでした。画像を調整して再試行してください。",
     "imageInvalidType": "JPEG、PNG、WebP形式の画像を選択してください。",
     "imageTooLarge": "画像サイズは20MB以下にしてください。",
     "imageMultipleFiles": "画像は1枚だけ選択してください。",
@@ -66,6 +69,8 @@
     "gemmaWebGpuRequired": "Gemmaの実行にはWebGPU対応のChromeまたはEdgeが必要です。",
     "gemmaInvalidJson": "Gemmaの応答をJSONとして読み取れませんでした。手入力で修正できます。",
     "gemmaInvalidData": "Gemmaの応答に未確定の項目があります。手入力で修正してください。",
+    "gemmaExecutionFailed": "Gemmaの実行中に問題が発生しました。OCR結果を保持したまま再試行できます。",
+    "gemmaStageCoverageIncomplete": "Gemmaの結果に認識できていないステージがあります。Gemmaを再試行してください。",
     "gemmaDownloadFailed": "Gemmaモデルを取得できませんでした。ネットワークを確認してください。",
     "gemmaDataFailed": "Gemmaモデルのデータを読み込めませんでした。"
   }

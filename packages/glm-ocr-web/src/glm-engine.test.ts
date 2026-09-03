@@ -1,8 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { GLM_EXTERNAL_DATA, GLM_MODEL_ID, GLM_MODEL_REVISION, OCR_ENGINES } from "./config";
-import { detectColumnBoundaries, fitOcrInputSize, GlmOcrEngine } from "./glm-engine";
+import { fitOcrInputSize, GlmOcrEngine } from "./glm-engine";
 import { createOcrEngine } from "./index";
-import { createOcrRegions } from "./glm-engine";
 import type { OcrProgress } from "./types";
 
 describe("GLM-OCR engine configuration", () => {
@@ -67,28 +66,30 @@ describe("GLM-OCR engine configuration", () => {
     expect(outcome).toBe("aborted");
   });
 
-  it("keeps the recognized text associated with its source region", async () => {
+  it("processes the complete image with one model generation", async () => {
     vi.resetModules();
     Object.defineProperty(navigator, "gpu", { configurable: true, value: {} });
+    const applyChatTemplate = vi.fn<() => string>(() => "prompt");
     const processor = Object.assign(
       vi.fn<(prompt: unknown, image: unknown, options: unknown) => { input_ids: { dims: number[] } }>(() => ({
         input_ids: { dims: [1, 4] },
       })),
       {
-        apply_chat_template: vi.fn<() => string>(() => "prompt"),
+        apply_chat_template: applyChatTemplate,
         batch_decode: vi.fn<() => string[]>(() => ["Artist A 10:00"]),
       },
     );
     const slice = vi.fn<() => void>();
+    const generate = vi.fn<() => { slice: typeof slice }>(() => ({ slice }));
     const model = {
       dispose: vi.fn<() => Promise<void>>(async () => undefined),
-      generate: vi.fn<() => { slice: typeof slice }>(() => ({ slice })),
+      generate,
     };
     vi.doMock("@huggingface/transformers", () => ({
       AutoProcessor: { from_pretrained: async () => processor },
       AutoModelForImageTextToText: { from_pretrained: async () => model },
       RawImage: {
-        fromBlob: async () => ({ width: 1200, height: 800, crop: async () => ({ width: 600, height: 400 }) }),
+        fromBlob: async () => ({ width: 1200, height: 800 }),
       },
       env: { fetch: vi.fn<(input: string | URL, init?: unknown) => Promise<unknown>>() },
     }));
@@ -100,9 +101,26 @@ describe("GLM-OCR engine configuration", () => {
     );
 
     expect(result.image).toEqual({ width: 1200, height: 800 });
-    expect(result.regions).toHaveLength(5);
+    expect(processor).toHaveBeenCalledOnce();
+    expect(applyChatTemplate).toHaveBeenCalledOnce();
+    expect(applyChatTemplate.mock.calls[0]).toEqual([
+      [
+        expect.objectContaining({
+          content: expect.arrayContaining([
+            expect.objectContaining({
+              type: "text",
+              text: "Table Recognition:",
+            }),
+          ]),
+        }),
+      ],
+      { add_generation_prompt: true },
+    ]);
+    expect(generate).toHaveBeenCalledOnce();
+    expect(generate).toHaveBeenCalledWith(expect.objectContaining({ max_new_tokens: 8192 }));
+    expect(result.regions).toHaveLength(1);
     expect(result.regions[0]).toEqual({
-      id: "overview",
+      id: "full-image",
       kind: "overview",
       text: "Artist A 10:00",
       order: 0,
@@ -111,7 +129,7 @@ describe("GLM-OCR engine configuration", () => {
     });
   });
 
-  it("bounds oversized crops before vision encoding to avoid std::bad_alloc", async () => {
+  it("bounds an oversized image before vision encoding to avoid std::bad_alloc", async () => {
     vi.resetModules();
     Object.defineProperty(navigator, "gpu", { configurable: true, value: {} });
     const processedImages: Array<{ width: number; height: number }> = [];
@@ -123,7 +141,7 @@ describe("GLM-OCR engine configuration", () => {
           options?: unknown,
         ) => { input_ids: { dims: number[] } }
       >((_prompt, image) => {
-        processedImages.push(image);
+        processedImages.push({ width: image.width, height: image.height });
         return { input_ids: { dims: [1, 4] } };
       }),
       {
@@ -155,11 +173,7 @@ describe("GLM-OCR engine configuration", () => {
         fromBlob: async () => ({
           width: 1240,
           height: 1754,
-          crop: async ([left, top, right, bottom]: number[]) => ({
-            width: right - left,
-            height: bottom - top,
-            resize,
-          }),
+          resize,
         }),
       },
       env: { fetch: vi.fn<(input: string | URL, init?: unknown) => Promise<unknown>>() },
@@ -173,43 +187,6 @@ describe("GLM-OCR engine configuration", () => {
       ),
     ).resolves.toMatchObject({ engine: "glm-ocr" });
     expect(resize).toHaveBeenCalled();
-    expect(processedImages).toHaveLength(5);
-    expect(processedImages).toEqual([
-      { width: 841, height: 1189 },
-      { width: 298, height: 1280 },
-      { width: 371, height: 1280 },
-      { width: 371, height: 1280 },
-      { width: 298, height: 1280 },
-    ]);
-  });
-
-  it("covers the complete image with ordered OCR regions", () => {
-    expect(createOcrRegions(1000, 2000)).toEqual([
-      { id: "overview", kind: "overview", region: { x: 0, y: 0, width: 1000, height: 2000 } },
-      { id: "column-1", kind: "column", region: { x: 0, y: 0, width: 330, height: 2000 } },
-      { id: "column-2", kind: "column", region: { x: 170, y: 0, width: 410, height: 2000 } },
-      { id: "column-3", kind: "column", region: { x: 420, y: 0, width: 410, height: 2000 } },
-      { id: "column-4", kind: "column", region: { x: 670, y: 0, width: 330, height: 2000 } },
-    ]);
-  });
-
-  it("detects strong full-height timetable column boundaries", () => {
-    const width = 300;
-    const height = 100;
-    const pixels = new Uint8ClampedArray(width * height * 3);
-    for (let y = 0; y < height; y += 1) {
-      for (let x = 0; x < width; x += 1) {
-        const value = x < 100 ? 20 : x < 200 ? 130 : 240;
-        pixels.fill(value, (y * width + x) * 3, (y * width + x) * 3 + 3);
-      }
-    }
-
-    const boundaries = detectColumnBoundaries(pixels, width, height, 3);
-
-    expect(boundaries).toHaveLength(2);
-    expect(boundaries[0]).toBeGreaterThanOrEqual(97);
-    expect(boundaries[0]).toBeLessThanOrEqual(102);
-    expect(boundaries[1]).toBeGreaterThanOrEqual(197);
-    expect(boundaries[1]).toBeLessThanOrEqual(202);
+    expect(processedImages).toEqual([{ width: 841, height: 1189 }]);
   });
 });

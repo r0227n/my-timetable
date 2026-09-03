@@ -13,10 +13,15 @@ import { selectableSchedules } from "./domain/schedule-review";
 import type { TimelineOptions } from "./domain/export";
 import type { OcrResult } from "@my-timetable/glm-ocr-web";
 import { defaultAdjustments, renderAdjustedImage, type ImageAdjustments } from "./lib/image";
-import { analyzeTimetable, type AnalysisUpdate } from "#analysis";
+import type { AnalysisUpdate } from "#analysis";
 import { clearAllModelCaches } from "./services/model-cache";
 import { useTranslation } from "react-i18next";
-import { localizeError } from "./i18n/errors";
+import {
+  describeAnalysisError,
+  type AnalysisFailure,
+  type AnalysisFailureStage,
+} from "./domain/analysis-error";
+import { AppError } from "./domain/errors";
 import {
   getE4BAvailability,
   resolveStoredGemmaModel,
@@ -27,13 +32,13 @@ import {
 type AnalysisState = {
   stage: "preparing" | "model" | "ocr" | "gemma" | "error";
   progress: number | null;
-  error: unknown | null;
+  failure: AnalysisFailure | null;
 };
 
 const initialAnalysis: AnalysisState = {
   stage: "preparing",
   progress: null,
-  error: null,
+  failure: null,
 };
 
 const initialTimelineOptions: TimelineOptions = {
@@ -95,18 +100,41 @@ export default function App() {
     return () => window.removeEventListener("beforeunload", warn);
   }, [step]);
 
-  const startAnalysis = async () => {
+  const startAnalysis = async (retryGemmaOnly = false) => {
     if (!sourceUrl) return;
     const nextController = new AbortController();
     controller.current = nextController;
     setAnalysis(initialAnalysis);
     setStep(2);
+    let activeStage: AnalysisFailureStage = retryGemmaOnly ? "gemma" : "image";
+    const retryCount = retryGemmaOnly ? 1 : 0;
     try {
-      const image = await renderAdjustedImage(sourceUrl, adjustments);
-      replaceObjectUrl(analysisImageUrlRef, image, setAnalysisImageUrl);
-      const result = await analyzeTimetable(image, handleAnalysisUpdate, nextController.signal, gemmaModel);
-      setTimetable(result.document);
-      setOcrResult(result.ocrResult);
+      let nextOcrResult = retryGemmaOnly ? ocrResult : null;
+      if (!nextOcrResult) {
+        const image = await renderAdjustedImage(sourceUrl, adjustments);
+        replaceObjectUrl(analysisImageUrlRef, image, setAnalysisImageUrl);
+        activeStage = "ocr";
+        const { recognizeImage } = await import("#analysis");
+        nextOcrResult = await recognizeImage(
+          image,
+          (progress) => {
+            activeStage = progress.stage === "recognition" ? "ocr" : "model";
+            handleAnalysisUpdate({ step: "ocr", ...progress });
+          },
+          nextController.signal,
+        );
+        if (!nextOcrResult.text.trim()) throw new AppError("analysisNoText");
+        setOcrResult(nextOcrResult);
+      }
+      activeStage = "gemma";
+      const { structureWithGemma } = await import("./services/gemma");
+      const document = await structureWithGemma(
+        nextOcrResult,
+        (progress) => handleAnalysisUpdate({ step: "gemma", ...progress }),
+        nextController.signal,
+        gemmaModel,
+      );
+      setTimetable(document);
       setStep(3);
     } catch (error) {
       if (nextController.signal.aborted) {
@@ -116,7 +144,7 @@ export default function App() {
       setAnalysis((current) => ({
         ...current,
         stage: "error",
-        error,
+        failure: describeAnalysisError(error, activeStage, gemmaModel, retryCount),
       }));
     } finally {
       if (controller.current === nextController) controller.current = null;
@@ -127,7 +155,7 @@ export default function App() {
     setAnalysis({
       stage: update.step === "ocr" ? (update.stage === "recognition" ? "ocr" : "model") : "gemma",
       progress: update.progress,
-      error: null,
+      failure: null,
     });
   };
   const manual = () => {
@@ -188,10 +216,11 @@ export default function App() {
         <AnalysisStep
           stage={analysis.stage}
           progress={analysis.progress}
-          error={analysis.error ? localizeError(analysis.error, "analysisFailed") : null}
+          failure={analysis.failure}
           onCancel={() => controller.current?.abort()}
           onManual={manual}
-          onRetry={() => void startAnalysis()}
+          onRetry={() => void startAnalysis(analysis.failure?.retryTarget === "gemma")}
+          onBackToAdjust={() => setStep(1)}
         />
       ) : null}
       {step === 3 ? (

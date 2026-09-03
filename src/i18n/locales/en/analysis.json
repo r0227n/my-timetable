@@ -9,5 +9,18 @@
   "downloadInfo": "The first run downloads about 2.8 GB for GLM-OCR and Gemma. Time varies with device and connection speed.",
   "cancel": "Cancel analysis",
   "retry": "Try again",
-  "manual": "Continue with manual entry"
+  "manual": "Continue with manual editing",
+  "backToAdjust": "Back to image adjustments",
+  "showDiagnostics": "Show diagnostic information",
+  "copyDiagnostics": "Copy diagnostic information",
+  "errorCodeLabel": "Error code",
+  "errorStages": {
+    "environment": "The execution environment is unavailable",
+    "image": "Image preparation failed",
+    "model": "Model download or initialization failed",
+    "ocr": "Text recognition failed",
+    "gemma": "Data structuring failed",
+    "unknown": "An unexpected problem occurred during analysis"
+  },
+  "retryActions": { "all": "Restart analysis", "ocr": "Retry OCR", "gemma": "Retry Gemma only" }
 }

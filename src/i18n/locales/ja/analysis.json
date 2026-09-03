@@ -9,5 +9,18 @@
   "downloadInfo": "初回はGLM-OCRとGemmaを合わせて約2.8GB取得します。時間は端末性能と回線速度によって変わります。",
   "cancel": "解析を中止",
   "retry": "もう一度試す",
-  "manual": "手入力で続ける"
+  "manual": "手動編集へ進む",
+  "backToAdjust": "画像調整へ戻る",
+  "showDiagnostics": "診断情報を表示",
+  "copyDiagnostics": "診断情報をコピー",
+  "errorCodeLabel": "エラーコード",
+  "errorStages": {
+    "environment": "実行環境を準備できませんでした",
+    "image": "画像の準備で失敗しました",
+    "model": "モデルの取得・初期化で失敗しました",
+    "ocr": "文字認識で失敗しました",
+    "gemma": "データ整形で失敗しました",
+    "unknown": "解析中に予期しない問題が発生しました"
+  },
+  "retryActions": { "all": "解析を最初から再試行", "ocr": "OCRを再試行", "gemma": "Gemmaだけ再試行" }
 }
