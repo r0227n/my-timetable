@@ -2861,9 +2861,40 @@ input[type="range"] {
   }
 }
 
-.review-detail .detail-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.review-detail .detail-form > :is(.detail-time-grid, .low-confidence-notice, .detail-error, .check-label, .review-confirm, .detail-actions, .review-extra, .cell-warning) { grid-column: 1 / -1; }
-.review-detail .detail-form .inline-checkbox { display: flex; align-items: center; min-height: 44px; gap: 8px; }
-.review-detail .inline-checkbox input, .review-detail .check-label input { width: 22px; height: 22px; min-height: 22px; margin: 0; }
-.review-artist-card .confidence { background: var(--surface-2); color: var(--ink); }
-.review-artist-card .schedule-select { cursor: default; }
+.review-detail .detail-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.review-detail
+  .detail-form
+  > :is(
+    .detail-time-grid,
+    .low-confidence-notice,
+    .detail-error,
+    .check-label,
+    .review-confirm,
+    .detail-actions,
+    .review-extra,
+    .cell-warning
+  ) {
+  grid-column: 1 / -1;
+}
+.review-detail .detail-form .inline-checkbox {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  gap: 8px;
+}
+.review-detail .inline-checkbox input,
+.review-detail .check-label input {
+  width: 22px;
+  height: 22px;
+  min-height: 22px;
+  margin: 0;
+}
+.review-artist-card .confidence {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+.review-artist-card .schedule-select {
+  cursor: default;
+}

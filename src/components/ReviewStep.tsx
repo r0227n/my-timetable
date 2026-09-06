@@ -52,7 +52,7 @@ export function ReviewStep({ document, sourceUrl, ocrResult, onChange, onBack, o
   const filtered = reviewRows.flatMap((row) => [...row.live, ...row.commerce, ...row.other]);
   const effectiveSelectedId = filtered.some((item) => item.id === selectedId)
     ? selectedId
-    : (filtered.find(item => matchesReviewFilter(document, item, filter))?.id ?? null);
+    : (filtered.find((item) => matchesReviewFilter(document, item, filter))?.id ?? null);
   const selected = document.schedules.find((item) => item.id === effectiveSelectedId) ?? null;
   const selectedOcrRegions = selected
     ? (ocrResult?.regions.filter((region) =>
