@@ -127,8 +127,8 @@ export default function App() {
         setOcrResult(nextOcrResult);
       }
       activeStage = "gemma";
-      const { structureWithGemma } = await import("./services/gemma");
-      const document = await structureWithGemma(
+      const { structureOcrResult } = await import("#analysis");
+      const document = await structureOcrResult(
         nextOcrResult,
         (progress) => handleAnalysisUpdate({ step: "gemma", ...progress }),
         nextController.signal,

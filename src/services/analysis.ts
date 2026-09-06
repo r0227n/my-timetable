@@ -1,7 +1,7 @@
 import type { TimetableDocument } from "../domain/timetable";
 import { createOcrEngine, OcrError, type OcrProgress, type OcrResult } from "@my-timetable/glm-ocr-web";
 import { AppError } from "../domain/errors";
-import type { AnalysisUpdate } from "./analysis-contract";
+import type { AnalysisGemmaProgress, AnalysisUpdate } from "./analysis-contract";
 import type { GemmaModelId } from "./gemma-model";
 
 export type { AnalysisUpdate } from "./analysis-contract";
@@ -15,14 +15,23 @@ export async function analyzeTimetable(
   const ocrResult = await recognizeImage(image, (progress) => onUpdate({ step: "ocr", ...progress }), signal);
   const ocrText = ocrResult.text;
   if (!ocrText.trim()) throw new AppError("analysisNoText");
-  const { structureWithGemma } = await import("./gemma");
-  const document = await structureWithGemma(
+  const document = await structureOcrResult(
     ocrResult,
     (progress) => onUpdate({ step: "gemma", ...progress }),
     signal,
     gemmaModel,
   );
   return { document, ocrResult };
+}
+
+export async function structureOcrResult(
+  ocrResult: OcrResult,
+  onProgress: (progress: AnalysisGemmaProgress) => void,
+  signal: AbortSignal,
+  gemmaModel: GemmaModelId = "e2b",
+): Promise<TimetableDocument> {
+  const { structureWithGemma } = await import("./gemma");
+  return structureWithGemma(ocrResult, onProgress, signal, gemmaModel);
 }
 
 export async function recognizeImage(

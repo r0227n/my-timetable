@@ -18,6 +18,13 @@ export function canVerifySchedule(document: TimetableDocument, item: ScheduleIte
   return isScheduleComplete(document, item);
 }
 
+export function bulkVerifiableSchedules(document: TimetableDocument): ScheduleItem[] {
+  return document.schedules.filter(
+    (item) =>
+      !item.verified && canVerifySchedule(document, item) && !item.endTimeSource.startsWith("inferred"),
+  );
+}
+
 export function needsReview(document: TimetableDocument, item: ScheduleItem): boolean {
   return !item.verified || item.confidence === "low" || !isScheduleComplete(document, item);
 }

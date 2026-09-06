@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { findDuplicateIds, findInvalidTimeRangeIds } from "../domain/conflicts";
 import {
+  bulkVerifiableSchedules,
   canVerifySchedule,
   matchesReviewFilter,
   needsReview,
@@ -61,7 +62,7 @@ export function ReviewStep({ document, sourceUrl, ocrResult, onChange, onBack, o
         selected.sourceRegions.some((sourceRegion) => regionsOverlap(region.region, sourceRegion)),
       ) ?? [])
     : [];
-  const eligible = document.schedules.filter((item) => !item.verified && canVerifySchedule(document, item));
+  const eligible = bulkVerifiableSchedules(document);
   const selectable = selectableSchedules(document);
   const excludedCount = document.schedules.length - selectable.length;
 

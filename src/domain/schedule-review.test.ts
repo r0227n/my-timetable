@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { createBlankSchedule, createEmptyDocument } from "./timetable";
-import { canVerifySchedule, needsReview, selectableSchedules } from "./schedule-review";
+import {
+  bulkVerifiableSchedules,
+  canVerifySchedule,
+  needsReview,
+  selectableSchedules,
+} from "./schedule-review";
 
 const complete = createBlankSchedule({
   id: "complete",
@@ -53,5 +58,14 @@ describe("schedule review rules", () => {
       ],
     };
     expect(selectableSchedules(document).map((item) => item.id)).toEqual(["complete"]);
+  });
+
+  it("requires individual confirmation for inferred end times", () => {
+    const explicit = { ...complete, id: "explicit", endTimeSource: "explicit" as const };
+    const inferred = { ...complete, id: "inferred", endTimeSource: "inferred_next_start" as const };
+    const document = { ...createEmptyDocument(), schedules: [explicit, inferred] };
+
+    expect(bulkVerifiableSchedules(document).map((item) => item.id)).toEqual(["explicit"]);
+    expect(canVerifySchedule(document, inferred)).toBe(true);
   });
 });

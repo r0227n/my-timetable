@@ -31,6 +31,14 @@ export default defineConfig({
       name: `analysis-${analysisMode}`,
       testMatch: /analysis\.spec\.ts/,
     },
+    ...(analysisMode === "fake"
+      ? [
+          {
+            name: "screens-fake",
+            testMatch: /screens\.spec\.ts/,
+          },
+        ]
+      : []),
   ],
   webServer: [
     {
