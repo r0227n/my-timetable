@@ -10,6 +10,9 @@ import {
 const scheduleTypeLabels = { live: "LIVE", meet_and_greet: "Meet & Greet", merch: "Merch", other: "Other" };
 const exportLabels = {
   defaultTitle: "My Timetable",
+  artist: "Artist",
+  commerce: "Merch / Meet & Greet",
+  nextDay: "Next day ",
   scheduleTypes: scheduleTypeLabels,
   timelineDescription: (count: number) => `Timeline with ${count} schedules`,
   untimed: "Time not set",
@@ -50,7 +53,7 @@ describe("timeline export", () => {
         background: "#ffffff",
         accent: "#df5d3d",
         title: "My Day",
-        layout: "vertical",
+
         showDate: true,
         showVenue: true,
         showType: true,
@@ -81,7 +84,7 @@ describe("timeline export", () => {
         background: "#ffffff",
         accent: "#df5d3d",
         title: "Day",
-        layout: "vertical",
+
         showDate: false,
         showVenue: false,
         showType: true,
@@ -93,7 +96,10 @@ describe("timeline export", () => {
 
     expect(svg).toContain("clip-path=");
     expect(svg).toContain("…");
-    expect(svg).not.toContain(longSchedule.artist);
+    const parsed = new DOMParser().parseFromString(svg, "image/svg+xml");
+    expect([...parsed.querySelectorAll("text")].map((node) => node.textContent).join(" ")).not.toContain(
+      longSchedule.artist,
+    );
   });
 
   it("creates a calendar with stable event details and excludes untimed schedules", () => {
@@ -186,24 +192,46 @@ describe("timeline export", () => {
     expect(isCalendarScheduleExportable(inferred, missingDate)).toBe(false);
     expect(isCalendarScheduleExportable({ ...inferred, verified: true }, missingDate)).toBe(true);
   });
-
-  it("positions timed cards on a constant time scale and separates simultaneous schedules", () => {
+  it("places live and merch in the same artist row without combining calendar events", () => {
     const schedules = [
-      createBlankSchedule({ id: "early", artist: "Early", startTime: "10:00", endTime: "10:20" }),
-      createBlankSchedule({ id: "same", artist: "Same", startTime: "10:00", endTime: "10:30" }),
-      createBlankSchedule({ id: "near", artist: "Near", startTime: "10:30", endTime: "11:00" }),
-      createBlankSchedule({ id: "late", artist: "Late", startTime: "18:00", endTime: "18:30" }),
+      createBlankSchedule({
+        id: "live",
+        artist: "Idol A",
+        startTime: "10:00",
+        endTime: "10:30",
+        verified: true,
+      }),
+      createBlankSchedule({
+        id: "merch",
+        artist: "Idol A",
+        type: "merch",
+        startTime: "11:00",
+        endTime: "12:00",
+        verified: true,
+      }),
+      createBlankSchedule({
+        id: "meet",
+        artist: "Idol A",
+        type: "meet_and_greet",
+        relativeTimeLabel: "終演後",
+      }),
+      createBlankSchedule({
+        id: "other",
+        artist: "Idol B",
+        type: "other",
+        startTime: "10:10",
+        endTime: "10:20",
+      }),
     ];
     const svg = buildTimelineSvg(
       document,
       schedules,
       {
         width: 1080,
-        height: 1920,
+        height: 1350,
         background: "#ffffff",
-        accent: "#df5d3d",
-        title: "My Day",
-        layout: "vertical",
+        accent: "#187864",
+        title: "Idol Day",
         showDate: true,
         showVenue: true,
         showType: true,
@@ -213,13 +241,24 @@ describe("timeline export", () => {
       exportLabels,
     );
     const parsed = new DOMParser().parseFromString(svg, "image/svg+xml");
-    const position = (id: string, attribute: "x" | "y") =>
-      Number(parsed.querySelector(`[data-schedule-id="${id}"] rect`)?.getAttribute(attribute));
-
-    expect(position("near", "y") - position("early", "y")).toBeLessThan(
-      position("late", "y") - position("near", "y"),
+    expect(parsed.querySelector("parsererror")).toBeNull();
+    expect(parsed.querySelectorAll("[data-artist-row]")).toHaveLength(2);
+    const live = parsed.querySelector('[data-schedule-id="live"]')!;
+    const merch = parsed.querySelector('[data-schedule-id="merch"]')!;
+    expect(live.closest("[data-artist-row]")).toBe(merch.closest("[data-artist-row]"));
+    expect(live.querySelector("text")?.getAttribute("y")).toBe(
+      merch.querySelector("text")?.getAttribute("y"),
     );
-    expect(position("same", "y")).toBe(position("early", "y"));
-    expect(position("same", "x")).not.toBe(position("early", "x"));
+    expect(live.querySelector("text")?.getAttribute("x")).not.toBe(
+      merch.querySelector("text")?.getAttribute("x"),
+    );
+    expect(parsed.querySelectorAll("[data-schedule-id]")).toHaveLength(4);
+    expect(svg).toContain("10:00–10:30");
+    expect(svg).toContain("11:00–12:00");
+    expect(svg).toContain("終演後");
+    expect(svg).toContain("⚠ Conflict");
+    const ics = buildIcsCalendar(document, schedules.slice(0, 2), scheduleTypeLabels);
+    expect(ics.match(/BEGIN:VEVENT/g)).toHaveLength(2);
+    expect(ics).toContain("DTSTART;TZID=Asia/Tokyo:20260827T110000");
   });
 });

@@ -1,6 +1,6 @@
 {
   "heading": "Review the extracted data",
-  "description": "Compare low-confidence fields with the source image and correct them.",
+  "description": "Compare with the image and check one schedule at a time. Continue with the schedules you have verified.",
   "verifiedCount": "{{verified}} / {{total}} verified",
   "readyCount": " / {{total}} selectable",
   "eventInfo": "Event information",
@@ -25,7 +25,11 @@
   "details": "Selected schedule details",
   "mobilePanels": "Supporting panels",
   "filterLabel": "Filter by review status",
-  "filters": { "all": "All", "needs_review": "Needs review", "verified": "Verified" },
+  "filters": {
+    "all": "All",
+    "needs_review": "Needs review",
+    "verified": "Verified"
+  },
   "emptyFilter": "No schedules match this filter.",
   "selectPrompt": "Select a schedule from the list.",
   "scheduleCount_one": "{{formattedCount}} schedule",
@@ -77,5 +81,9 @@
   "excludedNotice_one": "{{formattedCount}} unverified or incomplete schedule will be excluded from the next screen.",
   "excludedNotice_other": "{{formattedCount}} unverified or incomplete schedules will be excluded from the next screen.",
   "dateReminder": "Schedules without a date cannot be added to a calendar. Enter a default or per-schedule date.",
-  "next": "Choose schedules"
+  "next": "Choose schedules",
+  "eventMore": "Edit venue, opening times and more",
+  "currentItem": "Review this schedule",
+  "confirmNext": "Verify and continue",
+  "commerce": "Merch / Meet & Greet"
 }

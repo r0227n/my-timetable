@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { FileImage, LockKeyhole, ShieldCheck, Sparkles, Upload } from "lucide-react";
+import { CalendarDays, Crop, FileImage, LockKeyhole, ShieldCheck, Sparkles, Upload } from "lucide-react";
 import { modelConfig } from "../services/model-config";
 import { gemmaModels } from "../services/model-config";
 import type { GemmaModelId } from "../services/gemma-model";
@@ -45,6 +45,23 @@ export function UploadStep({ webGpu, gemmaModel = "e2b", onFile, onManual }: Upl
           <em>{t("heroLine2")}</em>
         </h1>
         <p>{t("description")}</p>
+        <div className="upload-guide">
+          <div>
+            <FileImage size={20} />
+            {tCommon("steps.image")}
+            <span>01</span>
+          </div>
+          <div>
+            <Crop size={20} />
+            {tCommon("steps.adjust")}
+            <span>02</span>
+          </div>
+          <div>
+            <CalendarDays size={20} />
+            {tCommon("steps.timeline")}
+            <span>06</span>
+          </div>
+        </div>
         <div className="privacy-note">
           <ShieldCheck size={21} />
           <div>
@@ -96,7 +113,7 @@ export function UploadStep({ webGpu, gemmaModel = "e2b", onFile, onManual }: Upl
             <Upload size={25} />
           </span>
           <strong>{t("drop")}</strong>
-          <span>{t("choose")}</span>
+          <span className="upload-choose">{t("choose")}</span>
           <small>{t("fileHint")}</small>
         </button>
         <input

@@ -1,13 +1,10 @@
 {
-  "heading": "タイムラインを整える",
-  "description": "選んだ予定だけを使って、保存用のレイアウトを調整します。",
+  "heading": "推しごとを、ひと目で。",
+  "description": "ライブも物販も、出演者ごとにひとつの行へ。",
   "previewLabel": "タイムラインプレビュー",
   "previewAlt": "生成したタイムラインのプレビュー",
   "title": "タイトル",
   "defaultTitle": "マイタイムテーブル",
-  "layout": "レイアウト",
-  "vertical": "縦型",
-  "horizontal": "横型",
   "outputSize": "出力サイズ",
   "presets": {
     "phone": "スマートフォン縦長",
@@ -31,5 +28,31 @@
   "svgDescription_one": "{{formattedCount}}件の予定を含む個人用タイムライン",
   "svgDescription_other": "{{formattedCount}}件の予定を含む個人用タイムライン",
   "untimed": "時刻未確定",
-  "conflict": "重複予定"
+  "conflict": "重複予定",
+  "editingTools": "タイムライン編集ツール",
+  "tools": {
+    "design": "デザイン",
+    "content": "表示内容",
+    "size": "サイズ",
+    "artists": "出演者"
+  },
+  "colorTheme": "カラーテーマ",
+  "palettes": {
+    "forest": "フォレスト",
+    "sunset": "サンセット",
+    "ocean": "オーシャン",
+    "lilac": "ライラック"
+  },
+  "livePreview": "変更はプレビューに反映されます",
+  "sizeHint": "幅・高さは320px以上で指定できます。",
+  "artist": "出演者",
+  "commerce": "物販・特典会",
+  "nextDay": "翌",
+  "groupHeading": "1組の予定を、1行に。",
+  "groupDescription": "LIVEと物販・特典会を横に並べて表示します。同じ日の予定をまとめ、複数回の出演もすべて残します。",
+  "artistCount_one": "{{count}}組の出演者",
+  "artistCount_other": "{{count}}組の出演者",
+  "zoomPreview": "拡大して確認",
+  "fitPreview": "全体を表示",
+  "selectionHint": "参加する予定を変える場合は「選択へ戻る」から変更できます。"
 }

@@ -169,4 +169,56 @@ describe("ReviewStep", () => {
 
     expect(screen.getByLabelText(/出演者名|artist/)).toHaveValue("Beta");
   });
+  it("keeps live and commerce together while confirming each schedule independently", async () => {
+    const user = userEvent.setup();
+    const base = createEmptyDocument();
+    const document = {
+      ...base,
+      event: { ...base.event, date: "2026-09-12" },
+      schedules: [
+        createBlankSchedule({
+          id: "live",
+          artist: "Idol A",
+          type: "live",
+          startTime: "10:00",
+          endTime: "10:30",
+          confidence: "high",
+        }),
+        createBlankSchedule({
+          id: "meet",
+          artist: "Idol A",
+          type: "meet_and_greet",
+          startTime: "11:00",
+          endTime: "12:00",
+          confidence: "high",
+        }),
+      ],
+    };
+    const onChange = vi.fn<(document: TimetableDocument) => void>();
+    const props = {
+      document,
+      sourceUrl: null,
+      ocrResult: null,
+      onChange,
+      onBack: vi.fn<() => void>(),
+      onNext: vi.fn<() => void>(),
+    };
+    const view = render(<ReviewStep {...props} />);
+    expect(view.container.querySelectorAll(".review-artist-card")).toHaveLength(1);
+    const live = screen.getByRole("button", { name: "Idol A LIVE 10:00–10:30" });
+    const meet = screen.getByRole("button", { name: "Idol A 特典会 11:00–12:00" });
+    expect(live.closest(".review-artist-card")).toBe(meet.closest(".review-artist-card"));
+    await user.click(screen.getByRole("button", { name: "確認して次へ" }));
+    const updated = onChange.mock.calls.at(-1)![0];
+    expect(updated.schedules.map((item) => item.verified)).toEqual([true, false]);
+    view.rerender(<ReviewStep {...props} document={updated} />);
+    expect(screen.getByLabelText("種別")).toHaveValue("meet_and_greet");
+    expect(screen.getByRole("button", { name: "Idol A LIVE 10:00–10:30" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "確認済み" }));
+    await user.click(screen.getByRole("button", { name: "行を追加" }));
+    const added = onChange.mock.calls.at(-1)![0];
+    view.rerender(<ReviewStep {...props} document={added} />);
+    expect(screen.getByLabelText("出演者名")).toHaveValue("");
+    expect(screen.getByRole("button", { name: "要確認" })).toHaveAttribute("aria-pressed", "true");
+  });
 });
