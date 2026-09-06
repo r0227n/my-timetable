@@ -1,18 +1,17 @@
-import { Check, Copy, Plus, Search, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, CheckCheck, Copy, Plus, Search, Trash2 } from "lucide-react";
 import type { TFunction } from "i18next";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { groupArtistSchedules, timelineTimeLabel } from "../domain/artist-timeline";
 import { findDuplicateIds, findInvalidTimeRangeIds } from "../domain/conflicts";
 import {
   canVerifySchedule,
   matchesReviewFilter,
-  needsReview,
   selectableSchedules,
   type ReviewFilter,
 } from "../domain/schedule-review";
 import {
   createBlankSchedule,
-  resolveScheduleDate,
   scheduleTypes,
   type ScheduleItem,
   type TimetableDocument,
@@ -36,25 +35,24 @@ export function ReviewStep({ document, sourceUrl, ocrResult, onChange, onBack, o
   const { t: tc } = useTranslation("common");
   const language = currentLanguage();
   const [filter, setFilter] = useState<ReviewFilter>("needs_review");
-  const [selectedId, setSelectedId] = useState<string | null>(document.schedules[0]?.id ?? null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>("details");
   const [sourceSize, setSourceSize] = useState({ width: 0, height: 0 });
   const duplicates = findDuplicateIds(document.schedules, document.event.date);
   const invalidRanges = findInvalidTimeRangeIds(document.schedules);
-  const filtered = useMemo(
+  const reviewRows = useMemo(
     () =>
-      document.schedules
-        .filter((item) => matchesReviewFilter(document, item, filter))
-        .toSorted((a, b) =>
-          `${resolveScheduleDate(document, a) ?? "9999"} ${a.startTime ?? "99:99"}`.localeCompare(
-            `${resolveScheduleDate(document, b) ?? "9999"} ${b.startTime ?? "99:99"}`,
-          ),
+      groupArtistSchedules(document, document.schedules).filter((row) =>
+        [...row.live, ...row.commerce, ...row.other].some((item) =>
+          matchesReviewFilter(document, item, filter),
         ),
+      ),
     [document, filter],
   );
+  const filtered = reviewRows.flatMap((row) => [...row.live, ...row.commerce, ...row.other]);
   const effectiveSelectedId = filtered.some((item) => item.id === selectedId)
     ? selectedId
-    : (filtered[0]?.id ?? null);
+    : (filtered.find(item => matchesReviewFilter(document, item, filter))?.id ?? null);
   const selected = document.schedules.find((item) => item.id === effectiveSelectedId) ?? null;
   const selectedOcrRegions = selected
     ? (ocrResult?.regions.filter((region) =>
@@ -87,6 +85,8 @@ export function ReviewStep({ document, sourceUrl, ocrResult, onChange, onBack, o
   const duplicate = (item: ScheduleItem) => {
     const copy = { ...item, id: crypto.randomUUID(), verified: false };
     onChange({ ...document, schedules: [...document.schedules, copy] });
+    setFilter("needs_review");
+    setMobilePanel("details");
     setSelectedId(copy.id);
   };
   const remove = (id: string) => {
@@ -96,12 +96,21 @@ export function ReviewStep({ document, sourceUrl, ocrResult, onChange, onBack, o
   const add = () => {
     const item = createBlankSchedule();
     onChange({ ...document, schedules: [...document.schedules, item] });
+    setFilter("needs_review");
+    setMobilePanel("details");
     setSelectedId(item.id);
   };
 
+  const confirmAndNext = () => {
+    if (!selected || !canVerifySchedule(document, selected)) return;
+    const remaining = filtered.filter((item) => item.id !== selected.id && !item.verified);
+    updateSchedule(selected.id, { verified: true });
+    setSelectedId(remaining[0]?.id ?? selected.id);
+  };
+
   return (
-    <main className="workspace-shell wide">
-      <div className="workspace-heading">
+    <main className="review-desk">
+      <div className="review-desk-heading">
         <div>
           <span className="eyebrow">04 / REVIEW</span>
           <h1>{t("heading")}</h1>
@@ -112,9 +121,9 @@ export function ReviewStep({ document, sourceUrl, ocrResult, onChange, onBack, o
           <span>{t("readyCount", { total: formatNumber(document.schedules.length, language) })}</span>
         </div>
       </div>
-      <section className="event-form panel">
+      <section className="review-event">
         <h2>{t("eventInfo")}</h2>
-        <div className="form-grid">
+        <div className="review-event-primary">
           <label>
             <span>{t("eventName")}</span>
             <input
@@ -132,73 +141,82 @@ export function ReviewStep({ document, sourceUrl, ocrResult, onChange, onBack, o
               onChange={(e) => updateEvent("date", e.target.value || null)}
             />
           </label>
-          <label>
-            <span>{t("venue")}</span>
-            <input
-              value={document.event.venue ?? ""}
-              onChange={(e) => updateEvent("venue", e.target.value || null)}
-              placeholder={t("venuePlaceholder")}
-            />
-          </label>
-          <label>
-            <span>{t("timezone")}</span>
-            <select value={document.event.timezone} onChange={(e) => updateEvent("timezone", e.target.value)}>
-              <option>Asia/Tokyo</option>
-              <option>UTC</option>
-            </select>
-          </label>
-          <label>
-            <span>{t("openTime")}</span>
-            <input
-              aria-label={t("openTime")}
-              type="time"
-              value={document.event.openTime ?? ""}
-              onChange={(e) => updateEvent("openTime", e.target.value || null)}
-            />
-          </label>
-          <label>
-            <span>{t("startTime")}</span>
-            <input
-              aria-label={t("startTime")}
-              type="time"
-              value={document.event.startTime ?? ""}
-              onChange={(e) => updateEvent("startTime", e.target.value || null)}
-            />
-          </label>
-          <label className="form-span-full">
-            <span>{t("notes")}</span>
-            <textarea
-              aria-label={t("notes")}
-              value={document.event.notes.join("\n")}
-              onChange={(e) => updateEvent("notes", e.target.value.split("\n").filter(Boolean))}
-              placeholder={t("notesPlaceholder")}
-            />
-          </label>
         </div>
+        {!document.event.date && <p className="review-date-reminder">{t("dateReminder")}</p>}
+        <details className="review-event-more">
+          <summary>{t("eventMore")}</summary>
+          <div className="form-grid">
+            <label>
+              <span>{t("venue")}</span>
+              <input
+                value={document.event.venue ?? ""}
+                onChange={(e) => updateEvent("venue", e.target.value || null)}
+                placeholder={t("venuePlaceholder")}
+              />
+            </label>
+            <label>
+              <span>{t("timezone")}</span>
+              <select
+                value={document.event.timezone}
+                onChange={(e) => updateEvent("timezone", e.target.value)}
+              >
+                <option>Asia/Tokyo</option>
+                <option>UTC</option>
+              </select>
+            </label>
+            <label>
+              <span>{t("openTime")}</span>
+              <input
+                aria-label={t("openTime")}
+                type="time"
+                value={document.event.openTime ?? ""}
+                onChange={(e) => updateEvent("openTime", e.target.value || null)}
+              />
+            </label>
+            <label>
+              <span>{t("startTime")}</span>
+              <input
+                aria-label={t("startTime")}
+                type="time"
+                value={document.event.startTime ?? ""}
+                onChange={(e) => updateEvent("startTime", e.target.value || null)}
+              />
+            </label>
+            <label className="form-span-full">
+              <span>{t("notes")}</span>
+              <textarea
+                aria-label={t("notes")}
+                value={document.event.notes.join("\n")}
+                onChange={(e) => updateEvent("notes", e.target.value.split("\n").filter(Boolean))}
+                placeholder={t("notesPlaceholder")}
+              />
+            </label>
+          </div>
+        </details>
       </section>
-      <div className="review-mobile-tabs" role="tablist" aria-label={t("mobilePanels")}>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={mobilePanel === "details"}
-          onClick={() => setMobilePanel("details")}
-        >
-          {t("details")}
-        </button>
-        {sourceUrl ? (
+      {sourceUrl && (
+        <div className="review-panel-switch">
           <button
             type="button"
-            role="tab"
-            aria-selected={mobilePanel === "source"}
-            onClick={() => setMobilePanel("source")}
+            aria-pressed={mobilePanel === "details"}
+            onClick={() => setMobilePanel("details")}
           >
-            {t("sourceImage")}
+            {t("details")}
           </button>
-        ) : null}
-      </div>
-      <div className={`review-layout ${sourceUrl ? "with-source" : ""}`}>
+          {sourceUrl ? (
+            <button
+              type="button"
+              aria-pressed={mobilePanel === "source"}
+              onClick={() => setMobilePanel("source")}
+            >
+              {t("sourceImage")}
+            </button>
+          ) : null}
+        </div>
+      )}
+      <div className={`review-workspace ${sourceUrl ? "has-source" : ""}`}>
         {sourceUrl ? (
-          <aside className={`source-panel panel mobile-${mobilePanel}`}>
+          <aside className={`review-source source-panel mobile-${mobilePanel}`}>
             <h2>
               <Search size={17} /> {t("sourceImage")}
             </h2>
@@ -235,7 +253,7 @@ export function ReviewStep({ document, sourceUrl, ocrResult, onChange, onBack, o
             ) : null}
           </aside>
         ) : null}
-        <section className="schedule-panel panel">
+        <section className="review-queue" aria-label={t("scheduleList")}>
           <div className="panel-heading">
             <div>
               <h2>{t("scheduleList")}</h2>
@@ -262,57 +280,80 @@ export function ReviewStep({ document, sourceUrl, ocrResult, onChange, onBack, o
               </button>
             ))}
           </fieldset>
-          <div className="schedule-table-wrap">
-            <table className="schedule-table review-summary-table">
-              <thead>
-                <tr>
-                  <th>{t("columns.artist")}</th>
-                  <th>{t("columns.type")}</th>
-                  <th>{t("columns.startEnd")}</th>
-                  <th>{t("columns.place")}</th>
-                  <th>{t("columns.confidence")}</th>
-                  <th>{t("columns.verified")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((item) => (
-                  <tr
-                    key={item.id}
-                    className={`${effectiveSelectedId === item.id ? "selected" : ""} ${needsReview(document, item) ? "needs-review" : ""}`}
-                    onClick={() => setSelectedId(item.id)}
-                  >
-                    <td>
-                      <button className="schedule-select" type="button">
-                        {item.artist || t("scheduleFallback")}
-                      </button>
-                    </td>
-                    <td>{tc(`scheduleTypes.${item.type}`)}</td>
-                    <td>
-                      {item.startTime ?? item.relativeTimeLabel ?? tc("unset")}{" "}
-                      {item.endTime
-                        ? `– ${item.endTime}${item.endsNextDay ? ` ${t("nextDayShort")}` : ""}`
-                        : ""}
-                    </td>
-                    <td>{[item.stage, item.booth].filter(Boolean).join(" / ") || tc("unset")}</td>
-                    <td>
-                      <span className={`confidence ${item.confidence}`}>
-                        {tc(`confidence.${item.confidence}`)}
-                      </span>
-                    </td>
-                    <td>
-                      {item.verified && canVerifySchedule(document, item) ? (
-                        <span className="verified-status">
-                          <Check size={14} /> {t("verified")}
-                        </span>
+          <div className="review-queue-items">
+            {reviewRows.map((row) => (
+              <article className="review-artist-card" key={row.id}>
+                <header>
+                  <strong className="schedule-select">{row.artist || t("scheduleFallback")}</strong>
+                  <span>{row.date ?? tc("unset")}</span>
+                </header>
+                <div className="review-artist-times">
+                  {(
+                    [
+                      { key: "live", label: tc("scheduleTypes.live") },
+                      { key: "commerce", label: t("commerce") },
+                    ] as const
+                  ).map(({ key, label }) => (
+                    <section key={key} aria-label={`${row.artist} ${label}`}>
+                      <h3>{label}</h3>
+                      {row[key].length ? (
+                        row[key].map((item) => (
+                          <button
+                            key={item.id}
+                            type="button"
+                            className="review-queue-item"
+                            aria-label={`${row.artist} ${tc(`scheduleTypes.${item.type}`)} ${timelineTimeLabel(item, tc("unset"), t("nextDayShort"))}`}
+                            aria-pressed={effectiveSelectedId === item.id}
+                            onClick={() => {
+                              setSelectedId(item.id);
+                              setMobilePanel("details");
+                            }}
+                          >
+                            <strong className="review-queue-time">
+                              {timelineTimeLabel(item, tc("unset"), t("nextDayShort"))}
+                            </strong>
+                            <span className="review-queue-meta">
+                              {[item.stage, item.booth].filter(Boolean).join(" / ") ||
+                                tc(`scheduleTypes.${item.type}`)}
+                            </span>
+                            <span className="review-queue-top">
+                              {item.verified && canVerifySchedule(document, item) ? (
+                                <>
+                                  <Check size={13} aria-hidden="true" />
+                                  {t("verified")}
+                                </>
+                              ) : (
+                                t("unverified")
+                              )}
+                              <span className={`confidence ${item.confidence}`}>
+                                {tc(`confidence.${item.confidence}`)}
+                              </span>
+                            </span>
+                          </button>
+                        ))
                       ) : (
-                        t("unverified")
+                        <p className="review-no-time">—</p>
                       )}
-                    </td>
-                  </tr>
+                    </section>
+                  ))}
+                </div>
+                {row.other.map((item) => (
+                  <button
+                    key={item.id}
+                    className="review-queue-item"
+                    type="button"
+                    aria-pressed={effectiveSelectedId === item.id}
+                    onClick={() => {
+                      setSelectedId(item.id);
+                      setMobilePanel("details");
+                    }}
+                  >
+                    {tc("scheduleTypes.other")} · {timelineTimeLabel(item, tc("unset"), t("nextDayShort"))}
+                  </button>
                 ))}
-              </tbody>
-            </table>
-            {!filtered.length ? <p className="empty-review">{t("emptyFilter")}</p> : null}
+              </article>
+            ))}
+            {!filtered.length && <p className="empty-review">{t("emptyFilter")}</p>}
           </div>
           <button
             className="text-button align-left"
@@ -333,8 +374,11 @@ export function ReviewStep({ document, sourceUrl, ocrResult, onChange, onBack, o
             })}
           </button>
         </section>
-        <aside className={`schedule-detail panel mobile-${mobilePanel}`}>
-          <h2>{t("details")}</h2>
+        <aside className={`review-detail schedule-detail mobile-${mobilePanel}`}>
+          <div className="review-detail-heading">
+            <span className="eyebrow">{t("currentItem")}</span>
+            <h2>{selected?.artist || t("details")}</h2>
+          </div>
           {selected ? (
             <ScheduleDetails
               item={selected}
@@ -346,6 +390,7 @@ export function ReviewStep({ document, sourceUrl, ocrResult, onChange, onBack, o
               remove={remove}
               t={t}
               tc={tc}
+              confirmAndNext={confirmAndNext}
             />
           ) : (
             <p className="muted">{t("selectPrompt")}</p>
@@ -360,12 +405,14 @@ export function ReviewStep({ document, sourceUrl, ocrResult, onChange, onBack, o
           })}
         </p>
       ) : null}
-      <div className="footer-actions">
+      <div className="review-desk-actions">
         <button className="ghost-button" type="button" onClick={onBack}>
+          <ArrowLeft size={16} aria-hidden="true" />
           {tc("back")}
         </button>
         <button className="primary-button" type="button" disabled={!selectable.length} onClick={onNext}>
           {t("next")}
+          <ArrowRight size={16} aria-hidden="true" />
         </button>
       </div>
     </main>
@@ -382,6 +429,7 @@ interface DetailProps {
   remove: (id: string) => void;
   t: TFunction<"review">;
   tc: TFunction<"common">;
+  confirmAndNext: () => void;
 }
 function ScheduleDetails({
   item,
@@ -393,6 +441,7 @@ function ScheduleDetails({
   remove,
   t,
   tc,
+  confirmAndNext,
 }: DetailProps) {
   const valid = canVerifySchedule(document, item);
   return (
@@ -498,26 +547,29 @@ function ScheduleDetails({
           />
         </label>
       </div>
-      <label>
-        <span>{t("attributes")}</span>
-        <textarea
-          aria-label={t("attributes")}
-          value={formatAttributes(item.attributes, {
-            unknown: tc("attribute.unknown"),
-            yes: tc("attribute.yes"),
-            no: tc("attribute.no"),
-          })}
-          onChange={(e) =>
-            update(item.id, {
-              attributes: parseAttributes(e.target.value, {
-                yes: tc("attribute.yes"),
-                no: tc("attribute.no"),
-              }),
-            })
-          }
-          placeholder={t("attributesPlaceholder")}
-        />
-      </label>
+      <details className="review-extra">
+        <summary>{t("attributes")}</summary>
+        <label>
+          <span>{t("attributes")}</span>
+          <textarea
+            aria-label={t("attributes")}
+            value={formatAttributes(item.attributes, {
+              unknown: tc("attribute.unknown"),
+              yes: tc("attribute.yes"),
+              no: tc("attribute.no"),
+            })}
+            onChange={(e) =>
+              update(item.id, {
+                attributes: parseAttributes(e.target.value, {
+                  yes: tc("attribute.yes"),
+                  no: tc("attribute.no"),
+                }),
+              })
+            }
+            placeholder={t("attributesPlaceholder")}
+          />
+        </label>
+      </details>
       {!valid ? <p className="detail-error">{t("cannotVerify")}</p> : null}
       <label className="check-label">
         <input
@@ -529,6 +581,15 @@ function ScheduleDetails({
         />
         <span>{t("verified")}</span>
       </label>
+      <button
+        className="primary-button review-confirm"
+        type="button"
+        disabled={!valid || item.verified}
+        onClick={confirmAndNext}
+      >
+        <CheckCheck size={18} aria-hidden="true" />
+        {t("confirmNext")}
+      </button>
       <div className="detail-actions">
         <button type="button" className="text-button" onClick={() => duplicate(item)}>
           <Copy size={15} /> {t("duplicate", { artist: item.artist || t("scheduleFallback") })}

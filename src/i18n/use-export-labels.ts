@@ -12,12 +12,14 @@ export function useExportLabels(): ExportLabels {
   return useMemo(
     () => ({
       defaultTitle: t("defaultTitle"),
+      artist: t("artist"),
+      commerce: t("commerce"),
+      nextDay: t("nextDay"),
       scheduleTypes: Object.fromEntries(
         scheduleTypes.map((type) => [type, tCommon(`scheduleTypes.${type}`)]),
       ) as Record<ScheduleType, string>,
       timelineDescription: (count: number) =>
         t("svgDescription", { count, formattedCount: formatNumber(count, language) }),
-      untimed: t("untimed"),
       unsetTime: tCommon("unset"),
       conflict: t("conflict"),
       formatDate: (date: string, timeZone: string) => formatDate(date, language, timeZone),

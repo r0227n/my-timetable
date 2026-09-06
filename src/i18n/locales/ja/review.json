@@ -1,6 +1,6 @@
 {
   "heading": "読み取り結果を確認",
-  "description": "低信頼の項目を中心に、元画像と見比べて修正してください。",
+  "description": "画像と照合して、1件ずつ確認。確認した予定から次へ進めます。",
   "verifiedCount": "{{verified}} / {{total}} 確認済み",
   "readyCount": " / {{total}}件 選択可能",
   "eventInfo": "イベント情報",
@@ -25,7 +25,11 @@
   "details": "選択予定の詳細",
   "mobilePanels": "補助パネル",
   "filterLabel": "確認状態で絞り込み",
-  "filters": { "all": "すべて", "needs_review": "要確認", "verified": "確認済み" },
+  "filters": {
+    "all": "すべて",
+    "needs_review": "要確認",
+    "verified": "確認済み"
+  },
   "emptyFilter": "この条件に該当する予定はありません。",
   "selectPrompt": "一覧から予定を選択してください。",
   "scheduleCount_one": "{{formattedCount}}件",
@@ -77,5 +81,9 @@
   "excludedNotice_one": "未確認または入力不備の{{formattedCount}}件は、次の画面の選択対象外です。",
   "excludedNotice_other": "未確認または入力不備の{{formattedCount}}件は、次の画面の選択対象外です。",
   "dateReminder": "開催日がない予定はカレンダーへ登録できません。既定日または予定ごとの日付を入力してください。",
-  "next": "予定を選ぶ"
+  "next": "予定を選ぶ",
+  "eventMore": "会場・開演時刻などを編集",
+  "currentItem": "この予定を確認",
+  "confirmNext": "確認して次へ",
+  "commerce": "物販・特典会"
 }

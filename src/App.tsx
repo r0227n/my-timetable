@@ -47,7 +47,7 @@ const initialTimelineOptions: TimelineOptions = {
   background: "#f4f0e7",
   accent: "#df5d3d",
   title: "",
-  layout: "vertical",
+
   showDate: true,
   showVenue: true,
   showType: true,

@@ -15,7 +15,7 @@ test("analyzes an uploaded timetable and opens review", async ({ page }, testInf
   await expect(page.getByRole("heading", { name: "画像を読み取っています" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "読み取り結果を確認" })).toBeVisible();
 
-  const rows = page.locator(".schedule-table tbody tr");
+  const rows = page.locator(".review-artist-card");
   expect(await rows.count()).toBeGreaterThan(0);
   await expect(rows.first().locator(".schedule-select")).not.toHaveText("");
   if (fake) {

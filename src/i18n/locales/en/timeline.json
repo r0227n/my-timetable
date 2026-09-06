@@ -1,13 +1,10 @@
 {
-  "heading": "Style your timeline",
-  "description": "Adjust the saved layout using only the schedules you selected.",
+  "heading": "Your artists. Your day.",
+  "description": "Live sets and merch, together in one artist row.",
   "previewLabel": "Timeline preview",
   "previewAlt": "Generated timeline preview",
   "title": "Title",
   "defaultTitle": "My Timetable",
-  "layout": "Layout",
-  "vertical": "Vertical",
-  "horizontal": "Horizontal",
   "outputSize": "Output size",
   "presets": {
     "phone": "Phone portrait",
@@ -31,5 +28,31 @@
   "svgDescription_one": "Personal timeline containing {{formattedCount}} schedule",
   "svgDescription_other": "Personal timeline containing {{formattedCount}} schedules",
   "untimed": "Time not set",
-  "conflict": "Conflicting schedule"
+  "conflict": "Conflicting schedule",
+  "editingTools": "Timeline editing tools",
+  "tools": {
+    "design": "Design",
+    "content": "Content",
+    "size": "Size",
+    "artists": "Artists"
+  },
+  "colorTheme": "Color theme",
+  "palettes": {
+    "forest": "Forest",
+    "sunset": "Sunset",
+    "ocean": "Ocean",
+    "lilac": "Lilac"
+  },
+  "livePreview": "Your changes appear in the preview",
+  "sizeHint": "Width and height must be at least 320px.",
+  "artist": "Artist",
+  "commerce": "Merch / Meet & Greet",
+  "nextDay": "+1d ",
+  "groupHeading": "One artist. One row.",
+  "groupDescription": "Live sets and merch appear side by side. Schedules on the same day are grouped, including every repeat appearance.",
+  "artistCount_one": "{{count}} artist",
+  "artistCount_other": "{{count}} artists",
+  "zoomPreview": "Zoom in",
+  "fitPreview": "Fit preview",
+  "selectionHint": "Use Back to selection to change which schedules are included."
 }

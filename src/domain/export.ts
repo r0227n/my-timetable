@@ -1,3 +1,5 @@
+import { groupArtistSchedules, timelineTimeLabel, type ArtistTimelineRow } from "./artist-timeline";
+import { detectConflicts } from "./conflicts";
 import {
   resolveScheduleDate,
   type ScheduleItem,
@@ -11,7 +13,6 @@ export interface TimelineOptions {
   background: string;
   accent: string;
   title: string;
-  layout: "vertical" | "horizontal";
   showDate: boolean;
   showVenue: boolean;
   showType: boolean;
@@ -21,9 +22,11 @@ export interface TimelineOptions {
 
 export interface ExportLabels {
   defaultTitle: string;
+  artist: string;
+  commerce: string;
+  nextDay: string;
   scheduleTypes: Record<ScheduleType, string>;
   timelineDescription: (count: number) => string;
-  untimed: string;
   unsetTime: string;
   conflict: string;
   formatDate: (date: string, timeZone: string) => string;
@@ -46,24 +49,45 @@ export function buildTimelineSvg(
   ]
     .filter(Boolean)
     .join(" · ");
-  const layout = createTimelineLayout(schedules);
-  const cards =
-    options.layout === "horizontal"
-      ? renderHorizontalCards(layout, width, height, options, labels)
-      : renderVerticalCards(layout, width, height, options, labels);
-
+  const rows = groupArtistSchedules(document, schedules);
+  const conflicts = new Set(
+    detectConflicts(schedules, 0, document.event.date).flatMap((item) => [item.firstId, item.secondId]),
+  );
+  const includeOther = rows.some((row) => row.other.length > 0);
+  const rowHeights = rows.map((row) =>
+    Math.max(132, Math.max(row.live.length, row.commerce.length, row.other.length) * 94 + 28),
+  );
+  const contentHeight = 230 + rowHeights.reduce((sum, value) => sum + value, 0);
+  const scale = Math.min(width / 1080, height / contentHeight);
+  const offset = (width - 1080 * scale) / 2;
+  let y = 190;
+  const cards = rows.map((row, index) => {
+    const card = renderArtistRow(row, index, y, rowHeights[index], includeOther, options, labels, conflicts);
+    y += rowHeights[index];
+    return card;
+  });
+  const columns = includeOther ? [48, 320, 554, 788] : [48, 380, 700];
+  const headings = [
+    labels.artist,
+    labels.scheduleTypes.live,
+    labels.commerce,
+    ...(includeOther ? [labels.scheduleTypes.other] : []),
+  ];
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-labelledby="title description">`,
     `<title id="title">${title}</title>`,
     `<desc id="description">${escapeXml(labels.timelineDescription(schedules.length))}</desc>`,
     `<rect width="${width}" height="${height}" fill="${escapeXml(options.background)}"/>`,
-    `<rect width="12" height="${height}" fill="${escapeXml(options.accent)}"/>`,
-    `<text x="${Math.round(width * 0.07)}" y="${Math.round(height * 0.09)}" font-family="system-ui, sans-serif" font-size="${Math.round(width * 0.045)}" font-weight="700" fill="#252722">${title}</text>`,
-    subtitle
-      ? `<text x="${Math.round(width * 0.07)}" y="${Math.round(height * 0.125)}" font-family="system-ui, sans-serif" font-size="${Math.round(width * 0.019)}" fill="#73756d">${escapeXml(subtitle)}</text>`
-      : "",
+    `<g transform="translate(${offset} 0) scale(${scale})">`,
+    `<rect x="48" y="36" width="48" height="6" rx="3" fill="${escapeXml(options.accent)}"/>`,
+    `<text x="48" y="96" font-family="system-ui, sans-serif" font-size="38" font-weight="700" fill="#182d2b">${escapeXml(truncateSvgText(options.title || document.event.name || labels.defaultTitle, 980, 38))}</text>`,
+    `<text x="48" y="130" font-family="system-ui, sans-serif" font-size="19" fill="#596d69">${escapeXml(truncateSvgText(subtitle, 980, 19))}</text>`,
+    ...headings.map(
+      (heading, index) =>
+        `<text x="${columns[index] + 16}" y="174" font-family="system-ui, sans-serif" font-size="19" font-weight="700" fill="#596d69">${escapeXml(heading)}</text>`,
+    ),
     ...cards,
-    `</svg>`,
+    `</g></svg>`,
   ].join("");
 }
 
@@ -142,217 +166,71 @@ export function createExportFileName(document: TimetableDocument): string {
   return `${event || "event"}-${document.event.date ?? "date-undecided"}-my-timetable`;
 }
 
-interface TimelineEntry {
-  schedule: ScheduleItem;
-  start: number;
-  end: number;
-  lane: number;
-}
-
-interface TimelineLayout {
-  timed: TimelineEntry[];
-  untimed: ScheduleItem[];
-  start: number;
-  end: number;
-  laneCount: number;
-  conflictIds: Set<string>;
-}
-
-function createTimelineLayout(schedules: ScheduleItem[]): TimelineLayout {
-  const candidates = schedules
-    .flatMap((schedule) => {
-      const start = timeToMinutes(schedule.startTime);
-      if (start === null) return [];
-      const parsedEnd = timeToMinutes(schedule.endTime);
-      const end = parsedEnd === null ? null : parsedEnd + (schedule.endsNextDay ? 1440 : 0);
-      return [{ schedule, start, end: end !== null && end > start ? end : start + 30 }];
-    })
-    .toSorted((first, second) => first.start - second.start || first.end - second.end);
-  const laneEnds: number[] = [];
-  const conflictIds = new Set<string>();
-  const timed = candidates.map((entry, index): TimelineEntry => {
-    const lane = laneEnds.findIndex((end) => end <= entry.start);
-    const resolvedLane = lane === -1 ? laneEnds.length : lane;
-    for (let previous = 0; previous < index; previous += 1) {
-      const other = candidates[previous];
-      if (other.end > entry.start) {
-        conflictIds.add(other.schedule.id);
-        conflictIds.add(entry.schedule.id);
-      }
-    }
-    laneEnds[resolvedLane] = entry.end;
-    return { ...entry, lane: resolvedLane };
-  });
-  return {
-    timed,
-    untimed: schedules.filter((schedule) => timeToMinutes(schedule.startTime) === null),
-    start: timed.length ? Math.min(...timed.map((entry) => entry.start)) : 0,
-    end: timed.length ? Math.max(...timed.map((entry) => entry.end)) : 60,
-    laneCount: Math.max(1, laneEnds.length),
-    conflictIds,
-  };
-}
-
-function renderVerticalCards(
-  layout: TimelineLayout,
-  width: number,
-  height: number,
-  options: TimelineOptions,
-  labels: ExportLabels,
-): string[] {
-  const top = height * 0.18;
-  const untimedSpace = layout.untimed.length ? Math.min(height * 0.22, layout.untimed.length * 58 + 45) : 0;
-  const availableHeight = Math.max(120, height * 0.76 - untimedSpace);
-  const duration = Math.max(30, layout.end - layout.start);
-  const laneGap = 8;
-  const availableWidth = width * 0.86;
-  const cardWidth = (availableWidth - laneGap * (layout.laneCount - 1)) / layout.laneCount;
-  const cards = layout.timed.map(({ schedule, start, end, lane }) => {
-    const x = width * 0.07 + lane * (cardWidth + laneGap);
-    const y = top + ((start - layout.start) / duration) * availableHeight;
-    const cardHeight = Math.max(52, ((end - start) / duration) * availableHeight - 4);
-    return renderTimelineCard(
-      schedule,
-      x,
-      y,
-      cardWidth,
-      cardHeight,
-      options,
-      labels,
-      layout.conflictIds.has(schedule.id),
-    );
-  });
-  if (layout.untimed.length) {
-    const headingY = top + availableHeight + 28;
-    cards.push(
-      `<text x="${width * 0.07}" y="${headingY}" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="#73756d">${escapeXml(labels.untimed)}</text>`,
-    );
-    layout.untimed.forEach((schedule, index) => {
-      cards.push(
-        renderTimelineCard(
-          schedule,
-          width * 0.07,
-          headingY + 12 + index * 54,
-          availableWidth,
-          46,
-          options,
-          labels,
-          false,
-        ),
-      );
-    });
-  }
-  return cards;
-}
-
-function renderHorizontalCards(
-  layout: TimelineLayout,
-  width: number,
-  height: number,
-  options: TimelineOptions,
-  labels: ExportLabels,
-): string[] {
-  const left = width * 0.07;
-  const untimedSpace = layout.untimed.length ? Math.min(width * 0.22, layout.untimed.length * 150 + 80) : 0;
-  const availableWidth = Math.max(180, width * 0.86 - untimedSpace);
-  const duration = Math.max(30, layout.end - layout.start);
-  const laneGap = 8;
-  const availableHeight = height * 0.62;
-  const cardHeight = (availableHeight - laneGap * (layout.laneCount - 1)) / layout.laneCount;
-  const cards = layout.timed.map(({ schedule, start, end, lane }) => {
-    const x = left + ((start - layout.start) / duration) * availableWidth;
-    const y = height * 0.2 + lane * (cardHeight + laneGap);
-    const cardWidth = Math.max(110, ((end - start) / duration) * availableWidth - 4);
-    return renderTimelineCard(
-      schedule,
-      x,
-      y,
-      cardWidth,
-      cardHeight,
-      options,
-      labels,
-      layout.conflictIds.has(schedule.id),
-    );
-  });
-  if (layout.untimed.length) {
-    const x = left + availableWidth + 24;
-    cards.push(
-      `<text x="${x}" y="${height * 0.18}" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="#73756d">${escapeXml(labels.untimed)}</text>`,
-    );
-    layout.untimed.forEach((schedule, index) => {
-      cards.push(
-        renderTimelineCard(
-          schedule,
-          x,
-          height * 0.2 + index * 90,
-          Math.max(120, untimedSpace - 32),
-          78,
-          options,
-          labels,
-          false,
-        ),
-      );
-    });
-  }
-  return cards;
-}
-
-function renderTimelineCard(
-  schedule: ScheduleItem,
-  x: number,
+function renderArtistRow(
+  row: ArtistTimelineRow,
+  index: number,
   y: number,
-  width: number,
   height: number,
+  includeOther: boolean,
   options: TimelineOptions,
   labels: ExportLabels,
-  conflicting: boolean,
+  conflicts: Set<string>,
 ): string {
-  const typeColors: Record<ScheduleItem["type"], string> = {
-    live: options.accent,
-    meet_and_greet: "#7567c7",
-    merch: "#3c8b70",
-    other: "#777777",
-  };
-  const clipId = `card-${stableTextHash(schedule.id)}`;
-  const primaryText = `${schedule.startTime ?? schedule.relativeTimeLabel ?? labels.unsetTime} ${schedule.artist}`;
-  const details = scheduleDetails(schedule, options, labels.scheduleTypes);
-  const textWidth = Math.max(0, width - (conflicting ? 58 : 32));
-  return [
-    `<g data-schedule-id="${escapeXml(schedule.id)}">`,
-    `<defs><clipPath id="${clipId}"><rect x="${(x + 12).toFixed(1)}" y="${(y + 4).toFixed(1)}" width="${Math.max(0, width - 24).toFixed(1)}" height="${Math.max(0, height - 8).toFixed(1)}"/></clipPath></defs>`,
-    `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${width.toFixed(1)}" height="${height.toFixed(1)}" rx="10" fill="#fcfaf5" stroke="#d8d2c5"/>`,
-    `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="7" height="${height.toFixed(1)}" rx="3" fill="${escapeXml(typeColors[schedule.type])}"/>`,
+  const columns = includeOther ? [48, 320, 554, 788, 1032] : [48, 380, 700, 1032];
+  const clipId = `artist-row-${index}`;
+  const result = [
+    `<g data-artist-row="${escapeXml(row.id)}">`,
+    `<title>${escapeXml(row.artist)}</title>`,
+    `<defs><clipPath id="${clipId}"><rect x="48" y="${y}" width="984" height="${height}"/></clipPath></defs>`,
+    `<rect x="48" y="${y}" width="984" height="${height}" fill="${index % 2 ? "#f1f5f4" : "#ffffff"}"/>`,
+    `<rect x="48" y="${y + 16}" width="4" height="${height - 32}" rx="2" fill="${escapeXml(options.accent)}"/>`,
     `<g clip-path="url(#${clipId})">`,
-    `<text x="${(x + 18).toFixed(1)}" y="${(y + 23).toFixed(1)}" font-family="system-ui, sans-serif" font-size="15" font-weight="700" fill="#252722">${escapeXml(truncateSvgText(primaryText, textWidth, 15))}</text>`,
-    `<text x="${(x + 18).toFixed(1)}" y="${(y + 43).toFixed(1)}" font-family="system-ui, sans-serif" font-size="11" fill="#73756d">${escapeXml(truncateSvgText(details, Math.max(0, width - 32), 11))}</text>`,
-    `</g>`,
-    conflicting
-      ? `<text x="${(x + width - 24).toFixed(1)}" y="${(y + 23).toFixed(1)}" font-size="16" aria-label="${escapeXml(labels.conflict)}">⚠</text>`
+    `<text x="64" y="${y + 44}" font-family="system-ui, sans-serif" font-size="25" font-weight="700" fill="#182d2b">${escapeXml(truncateSvgText(row.artist, columns[1] - 80, 25))}</text>`,
+    options.showDate && row.date
+      ? `<text x="64" y="${y + 77}" font-family="system-ui, sans-serif" font-size="18" fill="#596d69">${escapeXml(row.date)}</text>`
       : "",
-    `</g>`,
-  ].join("");
+  ];
+  const cells = [row.live, row.commerce, ...(includeOther ? [row.other] : [])];
+  cells.forEach((items, column) => {
+    const x = columns[column + 1] + 16;
+    const availableWidth = columns[column + 2] - x - 16;
+    result.push(
+      `<line x1="${x - 16}" x2="${x - 16}" y1="${y + 16}" y2="${y + height - 16}" stroke="#dce5e2"/>`,
+    );
+    if (!items.length) result.push(`<text x="${x}" y="${y + 44}" font-size="24" fill="#596d69">—</text>`);
+    items.forEach((schedule, itemIndex) => {
+      const top = y + 32 + itemIndex * 94;
+      const time = timelineTimeLabel(schedule, labels.unsetTime, labels.nextDay);
+      const details = scheduleDetails(schedule, options, labels.scheduleTypes);
+      result.push(
+        `<g data-schedule-id="${escapeXml(schedule.id)}">`,
+        `<title>${escapeXml(`${row.artist} · ${labels.scheduleTypes[schedule.type]} · ${time} · ${details}`)}</title>`,
+        `<text x="${x}" y="${top + 12}" font-family="system-ui, sans-serif" font-size="24" font-weight="650" fill="#182d2b">${escapeXml(truncateSvgText(time, availableWidth, 24))}</text>`,
+        `<text x="${x}" y="${top + 40}" font-family="system-ui, sans-serif" font-size="17" fill="#596d69">${escapeXml(truncateSvgText(details, availableWidth, 17))}</text>`,
+        conflicts.has(schedule.id)
+          ? `<text x="${x}" y="${top + 63}" font-family="system-ui, sans-serif" font-size="16" fill="#a33223">⚠ ${escapeXml(labels.conflict)}</text>`
+          : "",
+        `</g>`,
+      );
+    });
+  });
+  result.push(`</g><line x1="48" x2="1032" y1="${y + height}" y2="${y + height}" stroke="#dce5e2"/></g>`);
+  return result.join("");
 }
 
 function truncateSvgText(value: string, availableWidth: number, fontSize: number): string {
-  const maxUnits = Math.max(1, Math.floor(availableWidth / (fontSize * 0.58)));
   const characters = [...value];
-  if (characters.length <= maxUnits) return value;
-  return `${characters.slice(0, Math.max(1, maxUnits - 1)).join("")}…`;
-}
-
-function stableTextHash(value: string): string {
-  let hash = 2_166_136_261;
-  for (const character of value) {
-    hash ^= character.codePointAt(0) ?? 0;
-    hash = Math.imul(hash, 16_777_619);
+  const glyphWidth = (character: string) => fontSize * (/[^\u0020-\u007e]/u.test(character) ? 1.1 : 0.7);
+  if (characters.reduce((sum, character) => sum + glyphWidth(character), 0) <= availableWidth) return value;
+  let used = fontSize;
+  let result = "";
+  for (const character of characters) {
+    const nextWidth = glyphWidth(character);
+    if (used + nextWidth > availableWidth) break;
+    used += nextWidth;
+    result += character;
   }
-  return (hash >>> 0).toString(16);
-}
-
-function timeToMinutes(value: string | null): number | null {
-  if (!value) return null;
-  const [hours, minutes] = value.split(":").map(Number);
-  return hours * 60 + minutes;
+  return `${result}…`;
 }
 
 function addDays(date: string, days: number): string {
