@@ -1,3 +1,6 @@
+/* eslint-disable no-await-in-loop -- Reuse one GPU model sequentially to bound memory and conversation state. */
+import { refineTableKana } from "./text-geometry";
+import { detectTableRegions } from "./image-regions";
 import { GLM_EXTERNAL_DATA, GLM_MODEL_ID, GLM_MODEL_REVISION } from "./config";
 import { createModelProgressReporter } from "./model-progress";
 import { OcrError, type OcrEngine, type OcrProgress, type OcrResult } from "./types";
@@ -75,57 +78,77 @@ export class GlmOcrEngine implements OcrEngine {
 
     onProgress({ stage: "recognition", progress: 0, message: "画像全体をGLM-OCR用に準備しています" });
     const rawImage = await RawImage.fromBlob(image);
-    const region = { x: 0, y: 0, width: rawImage.width, height: rawImage.height };
-    let inputImage = rawImage;
-    const boundedSize = fitOcrInputSize(inputImage.width, inputImage.height);
-    if (boundedSize.width !== inputImage.width || boundedSize.height !== inputImage.height) {
-      inputImage = await inputImage.resize(boundedSize.width, boundedSize.height);
-    }
-    const prompt = processor.apply_chat_template(
-      [
-        {
-          role: "user",
-          content: [
-            { type: "image" },
-            {
-              type: "text",
-              text: FULL_TIMETABLE_PROMPT,
-            },
-          ],
-        },
-      ],
-      { add_generation_prompt: true },
-    );
-    const inputs = await processor(prompt, inputImage, { add_special_tokens: false });
-    const outputs = await model.generate({
-      ...inputs,
-      max_new_tokens: MAX_OCR_OUTPUT_TOKENS,
-      do_sample: false,
-    });
-    throwIfAborted(signal);
-
-    const promptLength = inputs.input_ids.dims.at(-1);
-    if (promptLength === undefined) throw new OcrError("invalidInput");
-    if (!("slice" in outputs) || typeof outputs.slice !== "function") {
-      throw new OcrError("invalidOutput");
-    }
-    const decoded = processor.batch_decode(outputs.slice(null, [promptLength, null]), {
-      skip_special_tokens: true,
-    });
-    const recognizedText = decoded[0]?.trim() ?? "";
-    const recognizedRegions: OcrResult["regions"] = recognizedText
-      ? [
+    const regions = detectTableRegions(rawImage.width, rawImage.height, rawImage.data ? rawImage : undefined);
+    const recognizedRegions: OcrResult["regions"] = [];
+    for (const [index, region] of regions.entries()) {
+      throwIfAborted(signal);
+      onProgress({
+        stage: "recognition",
+        progress: index / regions.length,
+        message: `画像領域 ${index + 1}/${regions.length} を認識しています`,
+      });
+      let inputImage =
+        regions.length === 1
+          ? rawImage
+          : await rawImage.crop([
+              region.x,
+              region.y,
+              region.x + region.width - 1,
+              region.y + region.height - 1,
+            ]);
+      const boundedSize = fitOcrInputSize(inputImage.width, inputImage.height);
+      if (boundedSize.width !== inputImage.width || boundedSize.height !== inputImage.height) {
+        inputImage = await inputImage.resize(boundedSize.width, boundedSize.height);
+      }
+      const prompt = processor.apply_chat_template(
+        [
           {
-            id: "full-image",
-            kind: "overview",
-            text: recognizedText,
-            order: 0,
-            confidence: null,
-            region,
+            role: "user",
+            content: [
+              { type: "image" },
+              {
+                type: "text",
+                text: region.kind === "header" ? "Text Recognition:" : FULL_TIMETABLE_PROMPT,
+              },
+            ],
           },
-        ]
-      : [];
-    const text = recognizedText ? `[full-image overview]\n${recognizedText}` : "";
+        ],
+        { add_generation_prompt: true },
+      );
+      const inputs = await processor(prompt, inputImage, { add_special_tokens: false });
+      const outputs = await model.generate({
+        ...inputs,
+        max_new_tokens: MAX_OCR_OUTPUT_TOKENS,
+        do_sample: false,
+      });
+      throwIfAborted(signal);
+
+      const promptLength = inputs.input_ids.dims.at(-1);
+      if (promptLength === undefined) throw new OcrError("invalidInput");
+      if (!("slice" in outputs) || typeof outputs.slice !== "function") {
+        throw new OcrError("invalidOutput");
+      }
+      const decoded = processor.batch_decode(outputs.slice(null, [promptLength, null]), {
+        skip_special_tokens: true,
+      });
+      const recognizedText = refineTableKana(
+        decoded[0]?.trim() ?? "",
+        rawImage.data ? rawImage : undefined,
+        region,
+      );
+      if (recognizedText)
+        recognizedRegions.push({
+          id: regions.length === 1 ? "full-image" : `band-${index + 1}`,
+          kind: region.kind ?? (regions.length === 1 ? "overview" : "column"),
+          text: recognizedText,
+          order: index,
+          confidence: null,
+          region: { x: region.x, y: region.y, width: region.width, height: region.height },
+        });
+    }
+    const text = recognizedRegions
+      .map((region) => `[${region.id} ${region.kind}]\n${region.text}`)
+      .join("\n\n");
     onProgress({ stage: "recognition", progress: 1, message: "文字認識が完了しました" });
     return {
       text,

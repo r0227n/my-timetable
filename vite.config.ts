@@ -9,6 +9,9 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     resolve: {
       alias: {
+        "@my-timetable/glm-ocr-web": fileURLToPath(
+          new URL("./packages/glm-ocr-web/src/index.ts", import.meta.url),
+        ),
         "#analysis": fileURLToPath(
           new URL(
             mode === "e2e-fake" ? "./e2e/fixtures/analysis.ts" : "./src/services/analysis.ts",

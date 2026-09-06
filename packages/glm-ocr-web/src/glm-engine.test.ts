@@ -174,6 +174,11 @@ describe("GLM-OCR engine configuration", () => {
           width: 1240,
           height: 1754,
           resize,
+          crop: async ([x, y, right, bottom]: number[]) => ({
+            width: right - x + 1,
+            height: bottom - y + 1,
+            resize,
+          }),
         }),
       },
       env: { fetch: vi.fn<(input: string | URL, init?: unknown) => Promise<unknown>>() },
@@ -186,7 +191,9 @@ describe("GLM-OCR engine configuration", () => {
         new AbortController().signal,
       ),
     ).resolves.toMatchObject({ engine: "glm-ocr" });
-    expect(resize).toHaveBeenCalled();
-    expect(processedImages).toEqual([{ width: 841, height: 1189 }]);
+    expect(processedImages.length).toBeGreaterThan(1);
+    expect(
+      processedImages.every((image) => image.width <= 1280 && image.width * image.height <= 1_000_000),
+    ).toBe(true);
   });
 });
