@@ -35,3 +35,17 @@ describe("inferMissingEndTimes", () => {
     ]);
   });
 });
+
+it("does not infer an activity's end from a different booth or activity type", () => {
+  const document = createEmptyDocument();
+  document.schedules = [
+    createBlankSchedule({ id: "live", type: "live", stage: "Hall", startTime: "13:00" }),
+    createBlankSchedule({ id: "merch-a", type: "merch", stage: "Hall", booth: "A", startTime: "13:10" }),
+    createBlankSchedule({ id: "merch-b", type: "merch", stage: "Hall", booth: "B", startTime: "13:20" }),
+  ];
+  expect(inferMissingEndTimes(document).schedules.map((item) => item.endTime)).toEqual([
+    "13:30",
+    "13:40",
+    "13:50",
+  ]);
+});
